@@ -13,7 +13,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    if (config.url && (config.url.startsWith('/favorites') || config.url.startsWith('/getFavorites'))) {
+    if (config.url && (config.url.startsWith('/favorites') || config.url.startsWith('/favorite'))) {
       const token = localStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -69,7 +69,7 @@ export const apiService = {
 
   fetchFavorites: async () => {
     try {
-      const response = await api.get('/getFavorites');
+      const response = await api.get('/favorites');
       return response.data.favorites;
     } catch (error) {
       console.error('Error fetching favorites:', error);
@@ -80,7 +80,7 @@ export const apiService = {
 
   checkIfFavorite: async (recipeId: number) => {
     try {
-      const response = await api.get(`/favorites/${recipeId}`);
+      const response = await api.get(`/favorite/${recipeId}`);
       return response.data;
     } catch (error) {
       console.error('Error checking if favorite:', error);
@@ -91,13 +91,13 @@ export const apiService = {
   toggleFavorite: async (recipeId: number, isFavorite: boolean) => {
     try {
       if (isFavorite) {
-        const response = await api.delete(`/favorites/${recipeId}`);
+        const response = await api.delete(`/favorite/${recipeId}`);
         if (response.status === 200) {
           showSuccessNotification('Removed from favorites');
           return false;
         }
       } else {
-        const response = await api.post(`/favorites/${recipeId}`);
+        const response = await api.post(`/favorite/${recipeId}`);
         if (response.status === 200 || response.status === 201) {
           showSuccessNotification('Added to favorites');
           return true;
