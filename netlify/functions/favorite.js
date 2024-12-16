@@ -6,7 +6,8 @@ dotenv.config();
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 export const handler = async (event) => {
-  const { recipeId } = event.queryStringParameters || {}; 
+  const { recipeId } = event.queryStringParameters || {};  
+  const authorizer = event.requestContext?.authorizer; 
 
   if (!recipeId) {
     return {
@@ -15,7 +16,14 @@ export const handler = async (event) => {
     };
   }
 
-  const userId = event.requestContext.authorizer.claims.sub;
+  if (!authorizer) {
+    return {
+      statusCode: 401,
+      body: JSON.stringify({ error: 'Unauthorized' }),
+    };
+  }
+
+  const userId = authorizer.claims.sub; 
 
   if (event.httpMethod === 'GET') {
     try {
