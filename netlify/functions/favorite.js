@@ -36,7 +36,8 @@ export const handler = async (event) => {
         .select('*')
         .eq('user_id', userId)
         .eq('recipe_id', recipeId)
-        .single();  
+        .maybeSingle();  
+        
 
       if (error) {
         throw error;
@@ -65,13 +66,14 @@ export const handler = async (event) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const userId = decoded.id; 
       
-      const { data, error, status } = await supabase
-        .from('favorites')
-        .upsert(
-          [{ user_id: userId, recipe_id: recipeId }],
-          { onConflict: ['user_id', 'recipe_id'] }
-        )
-        .single();
+      const { data, error } = await supabase
+      .from('favorites')
+      .upsert([
+        {
+          user_id: userId,
+          recipe_id: recipeId,
+        },
+      ], { onConflict: ['user_id', 'recipe_id'] }); 
 
       if (error) {
         throw error;
