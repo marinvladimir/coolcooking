@@ -491,13 +491,14 @@ export const StyledSelectContainer = styled.div`
     padding: 8px 8px !important;
   }
 
-  .my-custom-select__menu {
+.my-custom-select__menu {
     background-color: ${(props) => props.theme.colors.lightBackground};
-    max-height: 300px; 
-    overflow-y: auto; 
-    position: absolute; 
-    z-index: 100; 
-  }
+    max-height: 250px; 
+    overflow-y: auto;
+    padding: 4px 0;
+    position: absolute;
+    z-index: 100;
+}
 
   .my-custom-select__option {
     background-color: ${(props) => props.theme.colors.lightBackground};

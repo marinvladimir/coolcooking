@@ -136,6 +136,7 @@ uploadRecipe: async (data: Record<string, any>, file?: File | null) => {
     const imageUrl = await uploadToCloudinary(file);
     const formData = new FormData();
     formData.append('image_url', imageUrl);
+    formData.delete('image');
 
     Object.keys(data).forEach((key) => {
       if (Array.isArray(data[key])) {
@@ -144,8 +145,9 @@ uploadRecipe: async (data: Record<string, any>, file?: File | null) => {
         formData.append(key, String(data[key]));
       }
     });
-    const response = await api.post('/upload', formData);
-
+    const response = await api.post('/upload', formData, {
+      headers: { 'Content-Type': 'application/json' }, 
+    });
     if (response.status === 200 || response.status === 201) {
       showSuccessNotification('Successfully submitted new recipe!');
       return response.data;
