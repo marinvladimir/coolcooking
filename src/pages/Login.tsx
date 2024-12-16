@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { apiService } from '../api/api';
 
@@ -57,6 +57,7 @@ const Button = styled.button`
 const Login = () => {
   const [form, setForm] = useState({ email: '', password: '' });
   const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -71,7 +72,7 @@ const Login = () => {
       if (token) {
         localStorage.setItem('token', token);
         setMessage('Login successful');
-        window.location.href = '/favorites';
+        navigate('/favorites');
       } else {
         setMessage('Token not found in response.');
       }

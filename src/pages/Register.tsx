@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { apiService } from '../api/api';
+import { useNavigate } from 'react-router-dom';
 
 const Form = styled.form`
   display: flex;
@@ -56,6 +57,7 @@ const Button = styled.button`
 const Register = () => {
   const [form, setForm] = useState({ username: '', email: '', password: '' });
   const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -65,7 +67,7 @@ const Register = () => {
     e.preventDefault();
     try {
       await apiService.register(form);
-      window.location.href = '/login';
+      navigate('/login');
     } catch (error: any) {
       setMessage(error.response?.data?.error || 'Registration failed');
     }
