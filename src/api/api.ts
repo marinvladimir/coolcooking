@@ -78,37 +78,39 @@ export const apiService = {
     }
   },
 
-  checkIfFavorite: async (recipeId: number) => {
-    try {
-      const response = await api.get(`/favorite/${recipeId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error checking if favorite:', error);
-      throw error;
-    }
-  },
+checkIfFavorite: async (recipeId: number) => {
+  try {
+    const response = await api.get(`/favorite?recipeId=${recipeId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error checking if favorite:', error);
+    throw error;
+  }
+},
 
-  toggleFavorite: async (recipeId: number, isFavorite: boolean) => {
-    try {
-      if (isFavorite) {
-        const response = await api.delete(`/favorite/${recipeId}`);
-        if (response.status === 200) {
-          showSuccessNotification('Removed from favorites');
-          return false;
-        }
-      } else {
-        const response = await api.post(`/favorite/${recipeId}`);
-        if (response.status === 200 || response.status === 201) {
-          showSuccessNotification('Added to favorites');
-          return true;
-        }
+toggleFavorite: async (recipeId: number, isFavorite: boolean) => {
+  try {
+    const url = `/favorite?recipeId=${recipeId}`;  
+
+    if (isFavorite) {
+      const response = await api.delete(url); 
+      if (response.status === 200) {
+        showSuccessNotification('Removed from favorites');
+        return false;
       }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      showErrorNotification('Error toggling favorite');
-      throw error;
+    } else {
+      const response = await api.post(url); 
+      if (response.status === 200 || response.status === 201) {
+        showSuccessNotification('Added to favorites');
+        return true;
+      }
     }
-  },
+  } catch (error) {
+    console.error('Error toggling favorite:', error);
+    showErrorNotification('Error toggling favorite');
+    throw error;
+  }
+},
 
   uploadRecipe: async (data: Record<string, any>, file?: File | null) => {
     const formData = new FormData();
