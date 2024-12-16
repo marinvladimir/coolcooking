@@ -14,35 +14,40 @@ cloudinary.config({
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 export const handler = async (event, context) => {
+  console.log('Event received:', JSON.stringify(event));
+
   const form = new formidable.IncomingForm();
-  
-  form.parse(event.body, async (err, fields, files) => {
-    if (err) {
-      console.error('Error parsing form data:', err);
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Failed to parse form data' }),
-      };
-    }
 
-    const { title, description, category, ingredients, cooking_time } = fields;
-    const file = files.file;
+  try {
+    form.parse(event.body, async (err, fields, files) => {
+      if (err) {
+        console.error('Error parsing form data:', err);
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'Failed to parse form data' }),
+        };
+      }
 
-    if (!file) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'No image file provided' }),
-      };
-    }
+      const { title, description, category, ingredients, cooking_time } = fields;
+      const file = files.file;
 
-    let ingredientList = [];
-    if (typeof ingredients === 'string') {
-      ingredientList = ingredients.split(',').map((ingredient) => ingredient.trim());
-    }
+      if (!file) {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'No image file provided' }),
+        };
+      }
 
-    try {
+      console.log('Ingredients:', ingredients);
+      console.log('File:', file);
+
+      let ingredientList = [];
+      if (typeof ingredients === 'string') {
+        ingredientList = ingredients.split(',').map((ingredient) => ingredient.trim());
+      }
+
       const cloudinaryResponse = await cloudinary.uploader.upload(file.filepath, {
-        folder: 'assets', 
+        folder: 'assets', // 
       });
 
       const imageUrl = cloudinaryResponse.secure_url;
@@ -62,19 +67,23 @@ export const handler = async (event, context) => {
         .single();
 
       if (dbError) {
-        throw dbError;
+        console.error('Error inserting into Supabase:', dbError);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: 'Failed to save recipe to database' }),
+        };
       }
 
       return {
         statusCode: 201,
         body: JSON.stringify({ recipe: data }),
       };
-    } catch (error) {
-      console.error('Error saving recipe to database:', error);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to save recipe' }),
-      };
-    }
-  });
+    });
+  } catch (error) {
+    console.error('Error processing request:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Failed to process request' }),
+    };
+  }
 };
