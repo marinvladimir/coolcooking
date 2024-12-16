@@ -11,6 +11,7 @@ export const handler = async (event) => {
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
+
     const { data, error: dbError } = await supabase
       .from('users')
       .insert([
@@ -20,19 +21,25 @@ export const handler = async (event) => {
           password: hashedPassword,
         },
       ])
-      .single(); 
+      .select(); 
 
     if (dbError) {
       throw new Error(dbError.message);
     }
 
-    if (!data) {
+    if (!data || data.length === 0) {
       throw new Error('No data returned after insert');
     }
 
     return {
       statusCode: 201,
-      body: JSON.stringify({ user: { id: data.id, username, email } }),
+      body: JSON.stringify({
+        user: {
+          id: data[0].id,
+          username,
+          email,
+        },
+      }),
     };
   } catch (err) {
     console.error('Error registering user:', err);
