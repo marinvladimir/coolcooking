@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { validationResult } from 'express-validator';
@@ -6,13 +6,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const pool = new Pool({
-  user: process.env.POSTGRES_USER,
-  host: process.env.POSTGRES_HOST,
-  database: process.env.POSTGRES_DB,
-  password: process.env.POSTGRES_PASSWORD,
-  port: process.env.POSTGRES_PORT,
-});
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 export const handler = async (event, context) => {
   const { email, password } = JSON.parse(event.body);
@@ -25,19 +19,20 @@ export const handler = async (event, context) => {
   }
 
   try {
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [
-      email,
-    ]);
-    const user = result.rows[0];
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();  
 
-    if (!user) {
+    if (error || !data) {
       return {
         statusCode: 404,
         body: JSON.stringify({ error: 'User not found' }),
       };
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, data.password);
     if (!isPasswordValid) {
       return {
         statusCode: 401,
@@ -45,7 +40,7 @@ export const handler = async (event, context) => {
       };
     }
 
-    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: data.id }, process.env.JWT_SECRET, {
       expiresIn: '1h',
     });
 
@@ -53,7 +48,7 @@ export const handler = async (event, context) => {
       statusCode: 200,
       body: JSON.stringify({
         token,
-        user: { id: user.id, username: user.username, email: user.email },
+        user: { id: data.id, username: data.username, email: data.email },
       }),
     };
   } catch (err) {
