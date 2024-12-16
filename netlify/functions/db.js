@@ -14,7 +14,6 @@ import dotenv from 'dotenv';
 // export default pool;
 
 import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
 
 dotenv.config();
 
