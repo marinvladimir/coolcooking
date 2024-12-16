@@ -16,21 +16,16 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 export const handler = async (event, context) => {
   console.log('Event received:', JSON.stringify(event));
 
+  // Make sure to pass the raw body to formidable
   const form = new formidable.IncomingForm();
   form.keepExtensions = true;
-
-  const formData = new Promise((resolve, reject) => {
-    form.parse(event, (err, fields, files) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve({ fields, files });
-      }
-    });
-  });
-
-  try {
-    const { fields, files } = await formData;
+  form.parse(event.rawBody, (err, fields, files) => {
+    if (err) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Failed to process the form data' }),
+      };
+    }
 
     const { title, description, category, ingredients, cooking_time } = fields;
     const file = files.image;
@@ -47,43 +42,52 @@ export const handler = async (event, context) => {
       ingredientList = ingredients.split(',').map((ingredient) => ingredient.trim());
     }
 
-    const cloudinaryResponse = await cloudinary.uploader.upload(file.path, {
-      folder: 'assets',
-    });
+    // Upload the file to Cloudinary
+    cloudinary.uploader.upload(file.path, { folder: 'assets' })
+      .then((cloudinaryResponse) => {
+        const imageUrl = cloudinaryResponse.secure_url;
 
-    const imageUrl = cloudinaryResponse.secure_url;
+        // Insert recipe data into Supabase
+        supabase
+          .from('recipes')
+          .insert([
+            {
+              title: title || '',
+              description: description || '',
+              category: category || '',
+              ingredients: ingredientList,
+              cooking_time: cooking_time || '',
+              image: imageUrl,
+            },
+          ])
+          .then(({ data, error: dbError }) => {
+            if (dbError) {
+              console.error('Error inserting into Supabase:', dbError);
+              return {
+                statusCode: 500,
+                body: JSON.stringify({ error: 'Failed to save recipe to database' }),
+              };
+            }
 
-    const { data, error: dbError } = await supabase
-      .from('recipes')
-      .insert([
-        {
-          title: title || '',
-          description: description || '',
-          category: category || '',
-          ingredients: ingredientList,
-          cooking_time: cooking_time || '',
-          image: imageUrl,
-        },
-      ])
-      .single();
-
-    if (dbError) {
-      console.error('Error inserting into Supabase:', dbError);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to save recipe to database' }),
-      };
-    }
-
-    return {
-      statusCode: 201,
-      body: JSON.stringify({ recipe: data }),
-    };
-  } catch (error) {
-    console.error('Error processing request:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to process request' }),
-    };
-  }
+            return {
+              statusCode: 201,
+              body: JSON.stringify({ recipe: data }),
+            };
+          })
+          .catch((error) => {
+            console.error('Error saving to Supabase:', error);
+            return {
+              statusCode: 500,
+              body: JSON.stringify({ error: 'Failed to save recipe' }),
+            };
+          });
+      })
+      .catch((uploadError) => {
+        console.error('Error uploading image to Cloudinary:', uploadError);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: 'Failed to upload image' }),
+        };
+      });
+  });
 };
