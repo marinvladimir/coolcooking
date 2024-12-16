@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -9,26 +10,15 @@ export const handler = async (event) => {
   const { username, email, password } = JSON.parse(event.body);
 
   try {
-    const { user, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (authError) {
-      throw new Error(authError.message);
-    }
-
-    if (!user) {
-      throw new Error('User registration failed, no user data returned');
-    }
-
-    const { error: dbError } = await supabase
+    const { data, error: dbError } = await supabase
       .from('users')
       .insert([
         {
-          id: user.id,
           username,
           email,
+          password: hashedPassword, 
         },
       ]);
 
@@ -38,10 +28,10 @@ export const handler = async (event) => {
 
     return {
       statusCode: 201,
-      body: JSON.stringify({ user: { id: user.id, username, email } }),
+      body: JSON.stringify({ user: { id: data[0].id, username, email } }), 
     };
   } catch (err) {
-    console.error(err);
+    console.error('Error registering user:', err);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Registration failed', message: err.message }),
