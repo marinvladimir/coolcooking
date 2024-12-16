@@ -13,7 +13,7 @@ cloudinary.config({
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-// Use memory storage to avoid writing to disk
+// Use memory storage to avoid writing to disk (for serverless environments)
 const upload = multer({ storage: multer.memoryStorage() });
 
 export const handler = async (event, context) => {
@@ -41,6 +41,7 @@ export const handler = async (event, context) => {
       };
     }
 
+    // Process ingredients if they are a string
     let ingredientList = [];
     if (typeof ingredients === 'string') {
       ingredientList = ingredients.split(',').map((ingredient) => ingredient.trim());
@@ -57,7 +58,8 @@ export const handler = async (event, context) => {
       }
     );
 
-    cloudinaryResponse.end(file.buffer); // Pass the file buffer to Cloudinary
+    // Send the buffer to Cloudinary
+    cloudinaryResponse.end(file.buffer);
 
     const imageUrl = cloudinaryResponse.secure_url;
 
