@@ -1,7 +1,9 @@
-import { IncomingForm } from 'formidable';
+import Busboy from 'busboy';
 import cloudinary from 'cloudinary';
-import multer from 'multer';
 import { createClient } from '@supabase/supabase-js';
+import { parse } from 'querystring';
+import { Buffer } from 'buffer';
+import fs from 'fs';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -16,78 +18,87 @@ cloudinary.config({
 // Supabase setup
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-// Middleware to handle multipart form data
-const storage = multer.memoryStorage(); // Store file in memory
-const upload = multer({ storage }).single('image'); // 'image' is the field name for the file
-
+// Handling multipart data with Busboy
 export const handler = async (event, context) => {
+  const busboy = new Busboy({ headers: event.headers });
+
+  const fields = {};
+  let fileData = null;
+
   return new Promise((resolve, reject) => {
-    // Manually handle body
-    upload(event, context, async (err) => {
-      if (err) {
-        console.error('Multer upload error:', err);
-        return resolve({
-          statusCode: 500,
-          body: JSON.stringify({ error: 'Failed to process the form' }),
-        });
-      }
+    busboy.on('field', (fieldname, val) => {
+      fields[fieldname] = val;
+    });
 
-      // Extract form data and file
-      const { title, description, category, ingredients, cooking_time } = event.body;
-      const file = event.file;
+    busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
+      const chunks = [];
+      file.on('data', (chunk) => chunks.push(chunk));
+      file.on('end', async () => {
+        fileData = Buffer.concat(chunks);
 
-      if (!file) {
-        return resolve({
-          statusCode: 400,
-          body: JSON.stringify({ error: 'No image file provided' }),
-        });
-      }
+        try {
+          // Upload file to Cloudinary
+          const cloudinaryResponse = await cloudinary.uploader.upload_stream(
+            {
+              folder: 'assets',
+              resource_type: 'auto', // Automatically detect file type (image, video, etc.)
+            },
+            async (error, result) => {
+              if (error) {
+                return reject({ statusCode: 500, body: JSON.stringify({ error: 'Failed to upload image' }) });
+              }
 
-      // Parse ingredients into an array
-      let ingredientList = [];
-      if (typeof ingredients === 'string') {
-        ingredientList = ingredients.split(',').map((ingredient) => ingredient.trim());
-      }
+              const imageUrl = result.secure_url;
 
-      // Upload image to Cloudinary
-      try {
-        const cloudinaryResponse = await cloudinary.uploader.upload(file.path, {
-          folder: 'assets',
-        });
+              // Process form data and insert into Supabase
+              const { title, description, category, ingredients, cooking_time } = fields;
 
-        const imageUrl = cloudinaryResponse.secure_url;
+              if (typeof ingredients === 'string') {
+                fields.ingredients = ingredients.split(',').map((ingredient) => ingredient.trim());
+              }
 
-        // Insert recipe data into Supabase
-        const { data, error: dbError } = await supabase.from('recipes').insert([
-          {
-            title: title || '',
-            description: description || '',
-            category: category || '',
-            ingredients: ingredientList,
-            cooking_time: cooking_time || '',
-            image: imageUrl,
-          },
-        ]);
+              const { data, error: dbError } = await supabase.from('recipes').insert([
+                {
+                  title: title || '',
+                  description: description || '',
+                  category: category || '',
+                  ingredients: fields.ingredients || [],
+                  cooking_time: cooking_time || '',
+                  image: imageUrl,
+                },
+              ]);
 
-        if (dbError) {
-          console.error('Error inserting into Supabase:', dbError);
-          return resolve({
+              if (dbError) {
+                return reject({
+                  statusCode: 500,
+                  body: JSON.stringify({ error: 'Failed to save recipe to database' }),
+                });
+              }
+
+              return resolve({
+                statusCode: 201,
+                body: JSON.stringify({ recipe: data }),
+              });
+            }
+          );
+
+          // Pipe the image data into Cloudinary
+          const stream = fs.createReadStream(fileData);
+          stream.pipe(cloudinaryResponse);
+        } catch (error) {
+          console.error('Error processing file upload:', error);
+          reject({
             statusCode: 500,
-            body: JSON.stringify({ error: 'Failed to save recipe to database' }),
+            body: JSON.stringify({ error: 'Internal server error' }),
           });
         }
-
-        return resolve({
-          statusCode: 201,
-          body: JSON.stringify({ recipe: data }),
-        });
-      } catch (uploadError) {
-        console.error('Error uploading image to Cloudinary:', uploadError);
-        return resolve({
-          statusCode: 500,
-          body: JSON.stringify({ error: 'Failed to upload image' }),
-        });
-      }
+      });
     });
+
+    busboy.on('finish', () => {
+      // This runs when parsing is done
+    });
+
+    busboy.end(event.body);
   });
 };
