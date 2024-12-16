@@ -10,9 +10,18 @@ export const handler = async (event) => {
         body: JSON.stringify({ error: 'Method Not Allowed' }),
       };
     }
-    const body = JSON.parse(event.body);
+    let body;
+    try {
+      body = JSON.parse(event.body);
+    } catch (error) {
+      console.error('Invalid JSON in request:', error.message);
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Invalid JSON in request body' }),
+      };
+    }
     const { title, description, category, ingredients, cooking_time, image_url } = body;
-    if (!image_url || !title) {
+    if (!title || !image_url) {
       return {
         statusCode: 400,
         body: JSON.stringify({ error: 'Missing required fields: title or image_url' }),
@@ -25,9 +34,9 @@ export const handler = async (event) => {
           title,
           description,
           category,
-          ingredients: JSON.stringify(ingredients.split(',').map((item) => item.trim())),
+          ingredients: ingredients ? JSON.stringify(ingredients.split(',').map((item) => item.trim())) : '[]',
           cooking_time,
-          image_url,
+          image: image_url,
         },
       ])
       .single();
@@ -43,7 +52,7 @@ export const handler = async (event) => {
       body: JSON.stringify({ recipe: data }),
     };
   } catch (err) {
-    console.error('Error:', err.message);
+    console.error('Unexpected error:', err.message);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Internal Server Error' }),
