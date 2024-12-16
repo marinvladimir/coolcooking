@@ -5,7 +5,6 @@ dotenv.config();
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-// Log to ensure connection is working
 console.log('Supabase client initialized');
 
 
@@ -18,7 +17,7 @@ const createRecipesTable = async () => {
     console.log('Recipes table created successfully');
   } catch (error) {
     console.error('Error:', error);
-    throw error; // Rethrow the error to stop further execution
+    throw error;
   }
 };
 
@@ -31,7 +30,7 @@ const createUsersTable = async () => {
     console.log('Users table created successfully');
   } catch (error) {
     console.error('Error:', error);
-    throw error; // Rethrow the error to stop further execution
+    throw error;
   }
 };
 
@@ -44,18 +43,16 @@ const createFavTable = async () => {
     console.log('Favorites table created successfully');
   } catch (error) {
     console.error('Error:', error);
-    throw error; // Rethrow the error to stop further execution
+    throw error; 
   }
 };
 
 const seedDatabase = async () => {
   try {
-    // Wait for all table creation functions to complete
     await createRecipesTable();
     await createUsersTable();
     await createFavTable();
 
-    // After table creation, check if the recipes table is empty
     const { data: countData, error: countError } = await supabase
       .from('recipes')
       .select('id', { count: 'exact' })
@@ -66,7 +63,6 @@ const seedDatabase = async () => {
     }
 
     if (countData === 0) {
-      // Insert seed data if the table is empty
       const { error: insertError } = await supabase
         .from('recipes')
         .upsert([
