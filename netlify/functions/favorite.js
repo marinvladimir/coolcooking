@@ -9,7 +9,7 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY
 export const handler = async (event) => {
   const { recipeId } = event.queryStringParameters || {};
   const authHeader = event.headers['Authorization'] || event.headers['authorization'];
-  const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
 
   if (!authHeader) {
     return {
@@ -25,77 +25,77 @@ export const handler = async (event) => {
     };
   }
 
-  if (event.httpMethod === 'GET') {
-    try {
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const userId = decoded.id; 
-
+    if (event.httpMethod === 'GET') {
       const { data, error } = await supabase
         .from('favorites')
         .select('*')
         .eq('user_id', userId)
         .eq('recipe_id', recipeId)
-        .maybeSingle();  
-        
+        .maybeSingle(); 
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      if (data) {
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ isFavorite: true }),
-        };
-      } else {
-        return {
-          statusCode: 200,
-          body: JSON.stringify({ isFavorite: false }),
-        };
-      }
-    } catch (err) {
-      console.error('Error checking favorite:', err);
       return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Error checking favorite' }),
+        statusCode: 200,
+        body: JSON.stringify({ isFavorite: data ? true : false }),
       };
     }
-  } else if (event.httpMethod === 'POST') {
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const userId = decoded.id; 
-      
+
+    else if (event.httpMethod === 'POST') {
       const { data, error } = await supabase
-      .from('favorites')
-      .upsert([
-        {
-          user_id: userId,
-          recipe_id: recipeId,
-        },
-      ], { onConflict: ['user_id', 'recipe_id'] }); 
+        .from('favorites')
+        .upsert([
+          {
+            user_id: userId,
+            recipe_id: recipeId,
+          },
+        ], { onConflict: ['user_id', 'recipe_id'] }); 
 
-      if (error) {
-        throw error;
-      }
-
-      if (status === 409) {
-        return {
-          statusCode: 409,
-          body: JSON.stringify({ error: 'Recipe already in favorites' }),
-        };
-      }
+      if (error) throw error;
 
       return {
         statusCode: 201,
         body: JSON.stringify({ favorite: data }),
       };
-    } catch (err) {
-      console.error('Error adding to favorites:', err);
+    }
+
+    else if (event.httpMethod === 'DELETE') {
+      const { error } = await supabase
+        .from('favorites')
+        .delete()
+        .eq('user_id', userId)
+        .eq('recipe_id', recipeId);
+
+      if (error) {
+        console.error('Error removing from favorites:', error);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: 'Failed to remove recipe from favorites' }),
+        };
+      }
+
       return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to add recipe to favorites' }),
+        statusCode: 200,
+        body: JSON.stringify({ message: 'Recipe removed from favorites' }),
       };
     }
+
+    // Method not allowed
+    else {
+      return {
+        statusCode: 405,
+        body: JSON.stringify({ error: 'Method Not Allowed' }),
+      };
+    }
+  } catch (err) {
+    console.error('JWT verification error:', err);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Internal Server Error' }),
+    };
   }
 };
