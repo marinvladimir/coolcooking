@@ -6,8 +6,16 @@ dotenv.config();
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 export const handler = async (event) => {
-  const { recipeId } = event.queryStringParameters || {};  
-  const authorizer = event.requestContext?.authorizer; 
+  const { recipeId } = event.queryStringParameters || {};
+  const authHeader = event.headers['Authorization'] || event.headers['authorization'];
+  const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+
+  if (!authHeader) {
+    return {
+      statusCode: 401,
+      body: JSON.stringify({ error: 'Authorization header missing' }),
+    };
+  }
 
   if (!recipeId) {
     return {
@@ -16,17 +24,12 @@ export const handler = async (event) => {
     };
   }
 
-  if (!authorizer) {
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ error: 'Unauthorized' }),
-    };
-  }
-
-  const userId = authorizer.claims.sub; 
-
   if (event.httpMethod === 'GET') {
     try {
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id; 
+
       const { data, error } = await supabase
         .from('favorites')
         .select('*')
@@ -58,6 +61,9 @@ export const handler = async (event) => {
     }
   } else if (event.httpMethod === 'POST') {
     try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id; 
+      
       const { data, error, status } = await supabase
         .from('favorites')
         .upsert(
