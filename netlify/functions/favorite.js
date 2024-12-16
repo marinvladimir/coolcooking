@@ -6,7 +6,7 @@ dotenv.config();
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 export const handler = async (event) => {
-  const { recipeId } = event.pathParameters || {};
+  const { recipeId } = event.queryStringParameters || {}; 
 
   if (!recipeId) {
     return {
@@ -14,6 +14,7 @@ export const handler = async (event) => {
       body: JSON.stringify({ error: 'Recipe ID is required' }),
     };
   }
+
   const userId = event.requestContext.authorizer.claims.sub;
 
   if (event.httpMethod === 'GET') {
