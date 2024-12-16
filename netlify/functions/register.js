@@ -18,6 +18,10 @@ export const handler = async (event) => {
       throw new Error(authError.message);
     }
 
+    if (!user) {
+      throw new Error('User registration failed, no user data returned');
+    }
+
     const { error: dbError } = await supabase
       .from('users')
       .insert([
@@ -40,7 +44,7 @@ export const handler = async (event) => {
     console.error(err);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Registration failed' }),
+      body: JSON.stringify({ error: 'Registration failed', message: err.message }),
     };
   }
 };
