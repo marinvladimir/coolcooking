@@ -9,6 +9,9 @@
   status = 200
   force = true
 
+[[plugins]]
+  package = "@netlify/plugin-functions-core"
+
 [[headers]]
   for = "/assets/*"
   [headers.values]
