@@ -27,6 +27,10 @@ export const handler = async (event) => {
         body: JSON.stringify({ error: 'Missing required fields: title or image_url' }),
       };
     }
+    let ingredientsArray = [];
+    if (ingredients && typeof ingredients === 'string') {
+      ingredientsArray = ingredients.split(',').map((item) => item.trim());
+    }
     const { data, error } = await supabase
       .from('recipes')
       .insert([
@@ -34,7 +38,7 @@ export const handler = async (event) => {
           title,
           description,
           category,
-          ingredients: ingredients ? JSON.stringify(ingredients.split(',').map((item) => item.trim())) : '[]',
+          ingredients: ingredientsArray,
           cooking_time,
           image: image_url,
         },
