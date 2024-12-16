@@ -5,16 +5,57 @@ dotenv.config();
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
+// Log to ensure connection is working
+console.log('Supabase client initialized');
+
+
+const createRecipesTable = async () => {
+  try {
+    const { error } = await supabase.rpc('create_recipes_table');
+    if (error) {
+      throw new Error('Error creating recipes table');
+    }
+    console.log('Recipes table created successfully');
+  } catch (error) {
+    console.error('Error:', error);
+    throw error; // Rethrow the error to stop further execution
+  }
+};
+
+const createUsersTable = async () => {
+  try {
+    const { error } = await supabase.rpc('create_users_table');
+    if (error) {
+      throw new Error('Error creating users table');
+    }
+    console.log('Users table created successfully');
+  } catch (error) {
+    console.error('Error:', error);
+    throw error; // Rethrow the error to stop further execution
+  }
+};
+
+const createFavTable = async () => {
+  try {
+    const { error } = await supabase.rpc('create_favorites_table');
+    if (error) {
+      throw new Error('Error creating favorites table');
+    }
+    console.log('Favorites table created successfully');
+  } catch (error) {
+    console.error('Error:', error);
+    throw error; // Rethrow the error to stop further execution
+  }
+};
+
 const seedDatabase = async () => {
   try {
-    const { error: recipesError } = await supabase.rpc('create_recipes_table');
-    const { error: usersError } = await supabase.rpc('create_users_table');
-    const { error: favoritesError } = await supabase.rpc('create_favorites_table');
+    // Wait for all table creation functions to complete
+    await createRecipesTable();
+    await createUsersTable();
+    await createFavTable();
 
-    if (recipesError || usersError || favoritesError) {
-      throw new Error('Error creating tables');
-    }
-
+    // After table creation, check if the recipes table is empty
     const { data: countData, error: countError } = await supabase
       .from('recipes')
       .select('id', { count: 'exact' })
@@ -25,6 +66,7 @@ const seedDatabase = async () => {
     }
 
     if (countData === 0) {
+      // Insert seed data if the table is empty
       const { error: insertError } = await supabase
         .from('recipes')
         .upsert([
