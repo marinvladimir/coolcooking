@@ -1,7 +1,7 @@
 import cloudinary from 'cloudinary';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import formidable from 'formidable';
+import multer from 'multer';
 
 dotenv.config();
 
@@ -13,31 +13,26 @@ cloudinary.config({
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
+// Configure multer for file upload handling
+const upload = multer({ dest: 'uploads/' });
+
 export const handler = async (event, context) => {
   console.log('Event received:', JSON.stringify(event));
 
-  // Parse raw body if it's binary data (e.g., file upload)
-  const body = event.isBase64Encoded ? Buffer.from(event.body, 'base64') : event.body;
-
-  const form = new formidable.IncomingForm();
-  form.keepExtensions = true; // Keep file extensions on upload
-  form.uploadDir = '/tmp'; // Set the temporary directory to store the file (for AWS Lambda)
+  // Use multer to parse the incoming request
+  const formData = new Promise((resolve, reject) => {
+    upload.single('image')(event, context, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(event);
+      }
+    });
+  });
 
   try {
-    // Using a promise-based approach for form parsing
-    const parsedData = await new Promise((resolve, reject) => {
-      form.parse(body, (err, fields, files) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ fields, files });
-        }
-      });
-    });
-
-    const { fields, files } = parsedData;
-    const { title, description, category, ingredients, cooking_time } = fields;
-    const file = files.file;
+    const { title, description, category, ingredients, cooking_time } = formData.body;
+    const file = formData.file;
 
     if (!file) {
       return {
@@ -46,16 +41,13 @@ export const handler = async (event, context) => {
       };
     }
 
-    console.log('Ingredients:', ingredients);
-    console.log('File:', file);
-
     let ingredientList = [];
     if (typeof ingredients === 'string') {
       ingredientList = ingredients.split(',').map((ingredient) => ingredient.trim());
     }
 
     // Upload the file to Cloudinary
-    const cloudinaryResponse = await cloudinary.uploader.upload(file.filepath, {
+    const cloudinaryResponse = await cloudinary.uploader.upload(file.path, {
       folder: 'assets', // Specify Cloudinary folder
     });
 
@@ -66,11 +58,11 @@ export const handler = async (event, context) => {
       .from('recipes')
       .insert([
         {
-          title,
-          description,
-          category,
+          title: title || '',
+          description: description || '',
+          category: category || '',
           ingredients: ingredientList,
-          cooking_time,
+          cooking_time: cooking_time || '',
           image: imageUrl,
         },
       ])
