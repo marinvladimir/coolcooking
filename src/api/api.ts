@@ -13,7 +13,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    if (config.url && config.url.startsWith('/favorites')) {
+    if (config.url && (config.url.startsWith('/favorites') || config.url.startsWith('/getFavorites'))) {
       const token = localStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
