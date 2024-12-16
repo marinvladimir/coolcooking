@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components';
-import axios from 'axios';
 import CookingTimeline from '../components/CookingTimeline';
 import CountdownTimer from '../components/CountdownTimer';
 import { StarIcon } from '../icons/icons';
+import { apiService } from '../api/api';
 
 const Content = styled.main`
   flex: 1;
@@ -229,30 +229,13 @@ const OpenModalButton = styled.button<{ theme: string }>`
 `;
 
 const FavPage: React.FC = () => {
-  const api = axios.create({
-    baseURL: 'http://localhost:3000',
-  });
-
-  api.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    },
-    (error) => {
-      return Promise.reject(error);
-    }
-  );
-
   const [favorites, setFavorites] = useState<Recipe[]>([]);
 
   useEffect(() => {
     const fetchFavorites = async () => {
       try {
-        const response = await api.get('/favorites');
-        setFavorites(response.data.favorites);
+        const fetchedFavorites = await apiService.fetchFavorites();
+        setFavorites(fetchedFavorites);
       } catch (error) {
         console.error('Error fetching favorites:', error);
       }
@@ -274,19 +257,21 @@ const FavPage: React.FC = () => {
     setHasStarted(false);
   };
 
-  const removeFavorite = async (recipeId: number) => {
-    try {
-      const response = await api.delete(`/favorites/${recipeId}`);
-      if (response.status === 200) {
-        setFavorites((prevFavorites) =>
-          prevFavorites.filter((recipe) => recipe.id !== recipeId)
-        );
-        closeRecipeModal();
+   const removeFavorite = async (recipeId: number) => {
+      try {
+          await apiService.toggleFavorite(
+            recipeId,
+            true
+          );
+          setFavorites((prevFavorites) =>
+            prevFavorites.filter((recipe) => recipe.id !== recipeId)
+          );
+          closeRecipeModal();
+      } catch (error) {
+        console.error('Error toggling favorite:', error);
       }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-    }
-  };
+    };
+
 
   return (
     <Content>

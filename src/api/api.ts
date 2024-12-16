@@ -67,6 +67,17 @@ export const apiService = {
     }
   },
 
+  fetchFavorites: async () => {
+    try {
+      const response = await api.get('/getFavorites');
+      return response.data.favorites;
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+      showErrorNotification('Failed to fetch favorites');
+      throw error;
+    }
+  },
+
   checkIfFavorite: async (recipeId: number) => {
     try {
       const response = await api.get(`/favorites/${recipeId}`);
