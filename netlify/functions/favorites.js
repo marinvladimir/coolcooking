@@ -1,4 +1,4 @@
-import pool from './db';
+import supabase from './db';
 
 export const handler = async (event) => {
   const { recipeId } = event.pathParameters;
@@ -6,12 +6,18 @@ export const handler = async (event) => {
 
   if (event.httpMethod === 'GET') {
     try {
-      const result = await pool.query(
-        'SELECT * FROM favorites WHERE user_id = $1 AND recipe_id = $2',
-        [userId, recipeId]
-      );
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('recipe_id', recipeId)
+        .single();  
 
-      if (result.rows.length > 0) {
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
         return {
           statusCode: 200,
           body: JSON.stringify({ isFavorite: true }),
@@ -31,12 +37,19 @@ export const handler = async (event) => {
     }
   } else if (event.httpMethod === 'POST') {
     try {
-      const result = await pool.query(
-        `INSERT INTO favorites (user_id, recipe_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING *`,
-        [userId, recipeId]
-      );
+      const { data, error, status } = await supabase
+        .from('favorites')
+        .upsert(
+          [{ user_id: userId, recipe_id: recipeId }],
+          { onConflict: ['user_id', 'recipe_id'] }
+        )
+        .single();
 
-      if (result.rowCount === 0) {
+      if (error) {
+        throw error;
+      }
+
+      if (status === 409) {
         return {
           statusCode: 409,
           body: JSON.stringify({ error: 'Recipe already in favorites' }),
@@ -45,7 +58,7 @@ export const handler = async (event) => {
 
       return {
         statusCode: 201,
-        body: JSON.stringify({ favorite: result.rows[0] }),
+        body: JSON.stringify({ favorite: data }),
       };
     } catch (err) {
       console.error('Error adding to favorites:', err);
