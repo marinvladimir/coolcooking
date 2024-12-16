@@ -1,11 +1,18 @@
-import pool from './db';
+import supabase from './db';
 
 export async function handler(event) {
   try {
-    const result = await pool.query('SELECT * FROM recipes');
+    const { data, error } = await supabase
+      .from('recipes')
+      .select('*'); // Fetch all records from the 'recipes' table
+
+    if (error) {
+      throw error; // If there is an error, it will be caught in the catch block
+    }
+
     return {
       statusCode: 200,
-      body: JSON.stringify(result.rows),
+      body: JSON.stringify(data), // Return the fetched data as JSON
     };
   } catch (err) {
     console.error('Error fetching recipes:', err);
