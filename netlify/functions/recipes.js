@@ -1,18 +1,24 @@
-import supabase from './db';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+
 
 export async function handler(event) {
   try {
     const { data, error } = await supabase
       .from('recipes')
-      .select('*'); // Fetch all records from the 'recipes' table
+      .select('*');
 
     if (error) {
-      throw error; // If there is an error, it will be caught in the catch block
+      throw error; 
     }
 
     return {
       statusCode: 200,
-      body: JSON.stringify(data), // Return the fetched data as JSON
+      body: JSON.stringify(data),
     };
   } catch (err) {
     console.error('Error fetching recipes:', err);

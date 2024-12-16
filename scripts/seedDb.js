@@ -5,9 +5,6 @@ dotenv.config();
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-console.log('Supabase client initialized');
-
-
 const createRecipesTable = async () => {
   try {
     const { error } = await supabase.rpc('create_recipes_table');
