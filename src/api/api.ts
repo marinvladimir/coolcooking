@@ -118,21 +118,32 @@ uploadRecipe: async (data: Record<string, any>, file?: File | null) => {
     throw new Error('No image file provided!');
   }
 
-  const formData = new FormData();
+  const uploadToCloudinary = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', 'cooking'); 
 
-  if (file) {
-    formData.append('image', file);
-  }
+    const response = await fetch('https://api.cloudinary.com/v1_1/drvntbfxu/image/upload', {
+      method: 'POST',
+      body: formData,
+    });
 
-  Object.keys(data).forEach((key) => {
-    if (Array.isArray(data[key])) {
-      formData.append(key, data[key].join(', '));
-    } else {
-      formData.append(key, String(data[key]));
-    }
-  });
+    const data = await response.json();
+    return data.secure_url; 
+  };
 
   try {
+    const imageUrl = await uploadToCloudinary(file);
+    const formData = new FormData();
+    formData.append('image_url', imageUrl);
+
+    Object.keys(data).forEach((key) => {
+      if (Array.isArray(data[key])) {
+        formData.append(key, data[key].join(', '));
+      } else {
+        formData.append(key, String(data[key]));
+      }
+    });
     const response = await api.post('/upload', formData);
 
     if (response.status === 200 || response.status === 201) {
@@ -147,6 +158,6 @@ uploadRecipe: async (data: Record<string, any>, file?: File | null) => {
     console.error('Request failed', error);
     throw error;
   }
-},
+}
 
 };
