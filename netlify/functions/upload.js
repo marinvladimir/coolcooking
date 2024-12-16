@@ -3,7 +3,7 @@ import cloudinary from 'cloudinary';
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_API_KEY);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 // Initialize Cloudinary
 cloudinary.config({
