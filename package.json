@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "seed": "node netlify/functions/seedDb.js",
     "build": "tsc -b && npm run seed && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "seed": "node scripts/seedDb.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.8",
