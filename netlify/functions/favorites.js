@@ -1,4 +1,9 @@
-import supabase from './db';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 export const handler = async (event) => {
   const { recipeId } = event.pathParameters;

@@ -1,15 +1,12 @@
-import cloudinary from 'cloudinary';
-import pool from './db';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+dotenv.config();
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 export const handler = async (event, context) => {
-  const { title, description, category, ingredients, cooking_time } =
-    JSON.parse(event.body);
+  const { title, description, category, ingredients, cooking_time } = JSON.parse(event.body);
   const file = event.body.file;
 
   if (!file) {
@@ -20,22 +17,39 @@ export const handler = async (event, context) => {
   }
 
   try {
-    const cloudinaryResponse = await cloudinary.uploader.upload(file.path, {
-      folder: 'assets',
-    });
+    const { data, error: uploadError } = await supabase.storage
+      .from('assets')
+      .upload(`recipes/${file.filename}`, file, {
+        contentType: file.mimetype,
+      });
 
-    const imageUrl = cloudinaryResponse.secure_url;
+    if (uploadError) {
+      throw uploadError;
+    }
 
-    const result = await pool.query(
-      `INSERT INTO recipes (title, description, category, ingredients, cooking_time, image)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING *`,
-      [title, description, category, ingredients, cooking_time, imageUrl]
-    );
+    const imageUrl = `${process.env.SUPABASE_URL}/storage/v1/object/public/${data.path}`;
+
+    const { data: recipeData, error: dbError } = await supabase
+      .from('recipes')
+      .insert([
+        {
+          title,
+          description,
+          category,
+          ingredients,
+          cooking_time,
+          image: imageUrl,
+        },
+      ])
+      .single();
+
+    if (dbError) {
+      throw dbError;
+    }
 
     return {
       statusCode: 201,
-      body: JSON.stringify({ recipe: result.rows[0] }),
+      body: JSON.stringify({ recipe: recipeData }),
     };
   } catch (error) {
     console.error('Error saving recipe to database:', error);

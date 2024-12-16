@@ -1,20 +1,40 @@
-import pool from './db';
-import bcrypt from 'bcrypt';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
 export const handler = async (event) => {
   const { username, email, password } = JSON.parse(event.body);
 
   try {
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const { user, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
 
-    const result = await pool.query(
-      `INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email`,
-      [username, email, hashedPassword]
-    );
+    if (authError) {
+      throw new Error(authError.message);
+    }
+
+    const { error: dbError } = await supabase
+      .from('users')
+      .insert([
+        {
+          id: user.id,
+          username,
+          email,
+        },
+      ]);
+
+    if (dbError) {
+      throw new Error(dbError.message);
+    }
 
     return {
       statusCode: 201,
-      body: JSON.stringify({ user: result.rows[0] }),
+      body: JSON.stringify({ user: { id: user.id, username, email } }),
     };
   } catch (err) {
     console.error(err);
