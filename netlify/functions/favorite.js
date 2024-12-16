@@ -84,7 +84,6 @@ export const handler = async (event) => {
       };
     }
 
-    // Method not allowed
     else {
       return {
         statusCode: 405,
