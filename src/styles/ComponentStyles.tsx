@@ -493,7 +493,7 @@ export const StyledSelectContainer = styled.div`
 
   .my-custom-select__menu {
     background-color: ${(props) => props.theme.colors.lightBackground};
-    max-height: 300px; 
+    max-height: 150px; 
     overflow-y: auto; 
     position: absolute; 
     z-index: 100; 
