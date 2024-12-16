@@ -13,8 +13,8 @@ cloudinary.config({
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-// Configure multer for file upload handling
-const upload = multer({ dest: 'uploads/' });
+// Use memory storage to avoid writing to disk
+const upload = multer({ storage: multer.memoryStorage() });
 
 export const handler = async (event, context) => {
   console.log('Event received:', JSON.stringify(event));
@@ -46,10 +46,18 @@ export const handler = async (event, context) => {
       ingredientList = ingredients.split(',').map((ingredient) => ingredient.trim());
     }
 
-    // Upload the file to Cloudinary
-    const cloudinaryResponse = await cloudinary.uploader.upload(file.path, {
-      folder: 'assets', // Specify Cloudinary folder
-    });
+    // Upload the file directly to Cloudinary from memory
+    const cloudinaryResponse = await cloudinary.uploader.upload_stream(
+      { folder: 'assets' }, // Specify Cloudinary folder
+      (error, result) => {
+        if (error) {
+          throw new Error('Cloudinary upload failed');
+        }
+        return result;
+      }
+    );
+
+    cloudinaryResponse.end(file.buffer); // Pass the file buffer to Cloudinary
 
     const imageUrl = cloudinaryResponse.secure_url;
 
