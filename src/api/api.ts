@@ -112,37 +112,41 @@ toggleFavorite: async (recipeId: number, isFavorite: boolean) => {
   }
 },
 
-  uploadRecipe: async (data: Record<string, any>, file?: File | null) => {
-    const formData = new FormData();
+uploadRecipe: async (data: Record<string, any>, file?: File | null) => {
+  if (!file) {
+    showErrorNotification('No image file provided!');
+    throw new Error('No image file provided!');
+  }
 
-    if (file) {
-      formData.append('image', file);
+  const formData = new FormData();
+
+  if (file) {
+    formData.append('image', file);
+  }
+
+  Object.keys(data).forEach((key) => {
+    if (Array.isArray(data[key])) {
+      formData.append(key, data[key].join(', '));
+    } else {
+      formData.append(key, String(data[key]));
     }
+  });
 
-    Object.keys(data).forEach((key) => {
-      if (Array.isArray(data[key])) {
-        formData.append(key, data[key].join(', '));
-      } else {
-        formData.append(key, String(data[key]));
-      }
-    });
+  try {
+    const response = await api.post('/upload', formData);
 
-    try {
-      const response = await api.post('/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      if (response.status === 200 || response.status === 201) {
-        showSuccessNotification('Successfully submitted new recipe!');
-        return response.data;
-      } else {
-        showErrorNotification('Error adding the recipe!');
-        throw new Error('Error adding the recipe');
-      }
-    } catch (error) {
-      showErrorNotification('Request failed for adding the new recipe!');
-      console.error('Request failed', error);
-      throw error;
+    if (response.status === 200 || response.status === 201) {
+      showSuccessNotification('Successfully submitted new recipe!');
+      return response.data;
+    } else {
+      showErrorNotification('Error adding the recipe!');
+      throw new Error('Error adding the recipe');
     }
-  },
+  } catch (error) {
+    showErrorNotification('Request failed for adding the new recipe!');
+    console.error('Request failed', error);
+    throw error;
+  }
+},
+
 };
