@@ -136,14 +136,14 @@ const RecipesPage: React.FC = () => {
               setSelectedRecipe={setSelectedRecipe}
             />
           ))}
-          {/* {selectedRecipe && (
+          {selectedRecipe && (
             <CurrentRecipeModal
               recipe={selectedRecipe}
               setRecipe={setSelectedRecipe}
               setHasStarted={setHasStarted}
               hasStarted={hasStarted}
             />
-          )} */}
+          )}
         </RecipeWrapper>
       )}
 
