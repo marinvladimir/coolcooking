@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../states/ThemeContext';
-import { isAuthenticated } from './PrivateRoute';
+import { useAuth } from '../states/AuthContext';
 
 const HeaderWrapper = styled.header<{ $headerImage: string }>`
   background-color: ${(props) => props.theme.colors.primary};
@@ -135,6 +135,7 @@ const MobileMenu = styled.div<{ $isOpen: boolean }>`
 
 const Header: React.FC = () => {
   const { theme } = useTheme();
+  const { isLoggedIn, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
@@ -164,9 +165,21 @@ const Header: React.FC = () => {
         <StyledLink to="/plan" onClick={() => setIsMenuOpen(false)}>
           Plan
         </StyledLink>
-        <StyledLink to="/login" onClick={() => setIsMenuOpen(false)}>
-          {isAuthenticated() ? 'Logout' : 'Login'}
-        </StyledLink>
+        {isLoggedIn ? (
+          <StyledLink
+            to="/"
+            onClick={() => {
+              logout();
+              setIsMenuOpen(false);
+            }}
+          >
+            Logout
+          </StyledLink>
+        ) : (
+          <StyledLink to="/login" onClick={() => setIsMenuOpen(false)}>
+            Login
+          </StyledLink>
+        )}
       </MobileMenu>
 
       <Nav>
@@ -174,9 +187,13 @@ const Header: React.FC = () => {
         <StyledLink to="/recipes">Recipes</StyledLink>
         <StyledLink to="/favorites">Favorites</StyledLink>
         <StyledLink to="/plan">Plan</StyledLink>
-        <StyledLink to="/login">
-          {isAuthenticated() ? 'Logout' : 'Login'}
-        </StyledLink>
+        {isLoggedIn ? (
+          <StyledLink to="/" onClick={logout}>
+            Logout
+          </StyledLink>
+        ) : (
+          <StyledLink to="/login">Login</StyledLink>
+        )}
       </Nav>
     </>
   );

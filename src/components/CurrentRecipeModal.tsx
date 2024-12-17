@@ -15,10 +15,11 @@ import {
 import CountdownTimer from './CountdownTimer';
 import CookingTimeline from './CookingTimeline';
 import { StarIcon } from '../icons/icons';
-import { isAuthenticated } from './PrivateRoute';
 import axios from 'axios';
 import { useTheme } from '../states/ThemeContext';
+const { isLoggedIn } = useAuth();
 import { apiService } from '../api/api';
+import { useAuth } from '../states/AuthContext';
 
 const CurrentRecipeModal: React.FC<CurrentRecipeModalProps> = ({
   recipe,
@@ -47,7 +48,7 @@ const CurrentRecipeModal: React.FC<CurrentRecipeModalProps> = ({
   );
 
   useEffect(() => {
-    if (recipe && isAuthenticated()) {
+    if (recipe && isLoggedIn) {
       checkIfFavorite(recipe.id);
     }
   }, [recipe]);
@@ -68,7 +69,7 @@ const CurrentRecipeModal: React.FC<CurrentRecipeModalProps> = ({
 
   const toggleFavorite = async (recipeId: number) => {
     try {
-      if (isAuthenticated()) {
+      if (isLoggedIn) {
         const updatedFavoriteStatus = await apiService.toggleFavorite(
           recipeId,
           isFavorite
@@ -84,7 +85,7 @@ const CurrentRecipeModal: React.FC<CurrentRecipeModalProps> = ({
     <Modal onClick={closeRecipeModal} $isVisible={!!recipe}>
       <ModalContent onClick={(e) => e.stopPropagation()}>
         <ModalImage src={recipe.image} alt={recipe.title} />
-        {isAuthenticated() && (
+        {isLoggedIn && (
           <>
             <ToggleWrapper onClick={() => toggleFavorite(recipe.id)}>
               {isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}

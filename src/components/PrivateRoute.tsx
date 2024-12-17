@@ -1,35 +1,19 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
+import { useAuth } from '../states/AuthContext';
 
-const isTokenValid = (token: string | null): boolean => {
-  if (!token) return false;
-
-  try {
-    const decodedToken: any = jwtDecode(token);
-    const currentTime = Date.now() / 1000;
-    return decodedToken.exp > currentTime;
-  } catch (error) {
-    console.error('Invalid token:', error);
-    return false;
-  }
-};
-
-export const isAuthenticated = (): boolean => {
-  const token = localStorage.getItem('token');
-  if (!isTokenValid(token)) {
-    localStorage.removeItem('token');
-    return false;
-  }
-  return true;
-};
-
-interface PrivateRouteProps {
+interface ProtectedRouteProps {
   children: React.ReactElement;
+  redirectTo?: string; // Optional redirect path
 }
 
-const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
-  return isAuthenticated() ? children : <Navigate to="/login" replace />;
+const PrivateRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  redirectTo = '/login',
+}) => {
+  const { isLoggedIn } = useAuth();
+
+  return isLoggedIn ? children : <Navigate to={redirectTo} replace />;
 };
 
 export default PrivateRoute;

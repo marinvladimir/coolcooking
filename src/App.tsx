@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import PrivateRoute from './components/PrivateRoute';
 import Register from './pages/Register';
 import { ToastContainer } from 'react-toastify';
+import { AuthProvider } from './states/AuthContext';
 
 const Wrapper = styled.div`
   display: flex;
@@ -43,32 +44,34 @@ const AppWrapper: React.FC<AppWrapperProps> = ({ children }) => {
 
 const App: React.FC = () => {
   return (
-    <ThemeProvider>
-      <AppWrapper>
-        <Router>
-          <Wrapper>
-            <Header />
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/recipes" element={<RecipesPage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route
-                path="/favorites"
-                element={
-                  <PrivateRoute>
-                    <FavPage />
-                  </PrivateRoute>
-                }
-              />
-              <Route path="/plan" element={<PlanPage />} />
-            </Routes>
-            <Footer>© 2024 Cooking Recipes. All rights reserved.</Footer>
-          </Wrapper>
-        </Router>
-        <ToastContainer />
-      </AppWrapper>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <AppWrapper>
+          <Router>
+            <Wrapper>
+              <Header />
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/recipes" element={<RecipesPage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route
+                  path="/favorites"
+                  element={
+                    <PrivateRoute>
+                      <FavPage />
+                    </PrivateRoute>
+                  }
+                />
+                <Route path="/plan" element={<PlanPage />} />
+              </Routes>
+              <Footer>© 2024 Cooking Recipes. All rights reserved.</Footer>
+            </Wrapper>
+          </Router>
+          <ToastContainer />
+        </AppWrapper>
+      </ThemeProvider>
+    </AuthProvider>
   );
 };
 

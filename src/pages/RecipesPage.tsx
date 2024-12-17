@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useTheme } from '../states/ThemeContext';
-import { isAuthenticated } from '../components/PrivateRoute';
 import {
   Button,
   ButtonWrapper,
@@ -19,6 +18,7 @@ import CurrentRecipeModal from '../components/CurrentRecipeModal';
 import Pagination from '../components/Pagination';
 import Search from '../components/Search';
 import { apiService } from '../api/api';
+import { useAuth } from '../states/AuthContext';
 
 const RecipesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +33,7 @@ const RecipesPage: React.FC = () => {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const { category, setCategory } = useTheme();
   const { theme } = useTheme();
+  const { isLoggedIn } = useAuth();
 
   const openModal = () => setIsOpen(true);
 
@@ -47,7 +48,7 @@ const RecipesPage: React.FC = () => {
 
   useEffect(() => {
     let timer: any;
-    if (isAuthenticated()) {
+    if (isLoggedIn) {
       timer = setTimeout(() => {
         setShowElement(true);
       }, 2000);

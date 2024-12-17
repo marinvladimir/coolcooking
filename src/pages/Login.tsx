@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { apiService } from '../api/api';
-import { isAuthenticated } from '../components/PrivateRoute';
+import { useAuth } from '../states/AuthContext';
 
 const Form = styled.form`
   display: flex;
@@ -136,6 +136,7 @@ const Login = () => {
   const [form, setForm] = useState({ email: '', password: '' });
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
+  const { isLoggedIn } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -162,7 +163,7 @@ const Login = () => {
 
   return (
     <>
-      {isAuthenticated() ? (
+      {isLoggedIn ? (
         <LogoutPage />
       ) : (
         <Wrapper>
