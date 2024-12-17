@@ -165,7 +165,7 @@ const Header: React.FC = () => {
           Plan
         </StyledLink>
         <StyledLink to="/login" onClick={() => setIsMenuOpen(false)}>
-          {isAuthenticated() ? 'Login' : 'Logout'}
+          {isAuthenticated() ? 'Logout' : 'Login'}
         </StyledLink>
       </MobileMenu>
 
@@ -175,7 +175,7 @@ const Header: React.FC = () => {
         <StyledLink to="/favorites">Favorites</StyledLink>
         <StyledLink to="/plan">Plan</StyledLink>
         <StyledLink to="/login">
-          {isAuthenticated() ? 'Login' : 'Logout'}
+          {isAuthenticated() ? 'Logout' : 'Login'}
         </StyledLink>
       </Nav>
     </>
