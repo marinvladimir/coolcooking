@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { apiService } from '../api/api';
+import { isAuthenticated } from '../components/PrivateRoute';
 
 const Form = styled.form`
   display: flex;
@@ -54,62 +55,30 @@ const Button = styled.button`
   }
 `;
 
-const Login = () => {
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [message, setMessage] = useState('');
-  const navigate = useNavigate();
+const Wrapper = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; /* Full-screen height */
+  background-color: ${({ theme }) => theme.colors.background};
+  padding: 1rem;
+`;
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+const Card = styled.div`
+  background-color: ${({ theme }) => theme.colors.lightBackground};
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  max-width: 400px;
+  width: 100%;
+`;
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const response = await apiService.login(form);
-      console.log(response);
-      const token = response.token;
-      if (token) {
-        localStorage.setItem('token', token);
-        setMessage('Login successful');
-        navigate('/favorites');
-      } else {
-        setMessage('Token not found in response.');
-      }
-    } catch (error: any) {
-      console.error('Error:', error);
-      setMessage(error.response?.data?.error || 'Login failed');
-    }
-  };
-
-  return (
-    <Form onSubmit={handleSubmit}>
-      <Input
-        name="email"
-        type="email"
-        placeholder="Email"
-        onChange={handleChange}
-        required
-      />
-      <Input
-        name="password"
-        type="password"
-        placeholder="Password"
-        onChange={handleChange}
-        required
-      />
-      <Button type="submit">Login</Button>
-      <p>{message}</p>
-      <Nav>
-        <StyledLink to="/register">
-          Don't have an account? Register here
-        </StyledLink>
-      </Nav>
-    </Form>
-  );
-};
-
-export default Login;
+const Title = styled.h2`
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  color: ${({ theme }) => theme.colors.text};
+`;
 
 const Nav = styled.nav`
   display: flex;
@@ -139,3 +108,91 @@ const StyledLink = styled(Link)`
     transform: translateY(0);
   }
 `;
+
+const LogoutPage = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/');
+  };
+
+  return (
+    <Wrapper>
+      <Card>
+        <Title>You are logged in</Title>
+        <p>Would you like to log out?</p>
+        <Button onClick={handleLogout}>Log Out</Button>
+        <StyledLink to="/favorites">Go to Favorites</StyledLink>
+      </Card>
+    </Wrapper>
+  );
+};
+
+const Login = () => {
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [message, setMessage] = useState('');
+  const navigate = useNavigate();
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const response = await apiService.login(form);
+      console.log(response);
+      const token = response.token;
+      if (token) {
+        localStorage.setItem('token', token);
+        setMessage('Login successful');
+        navigate('/favorites');
+      } else {
+        setMessage('Token not found in response.');
+      }
+    } catch (error: any) {
+      console.error('Error:', error);
+      setMessage(error.response?.data?.error || 'Login failed');
+    }
+  };
+
+  return (
+    <>
+      {isAuthenticated() ? (
+        <LogoutPage />
+      ) : (
+        <Wrapper>
+          <Card>
+            <Title>Login</Title>
+            <Form onSubmit={handleSubmit}>
+              <Input
+                name="email"
+                type="email"
+                placeholder="Email"
+                onChange={handleChange}
+                required
+              />
+              <Input
+                name="password"
+                type="password"
+                placeholder="Password"
+                onChange={handleChange}
+                required
+              />
+              <Button type="submit">Login</Button>
+              <p>{message}</p>
+              <Nav>
+                <StyledLink to="/register">
+                  Don't have an account? Register here
+                </StyledLink>
+              </Nav>
+            </Form>
+          </Card>
+        </Wrapper>
+      )}
+    </>
+  );
+};
+
+export default Login;

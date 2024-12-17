@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { useTheme } from '../states/ThemeContext';
+import { isAuthenticated } from './PrivateRoute';
 
 const HeaderWrapper = styled.header<{ $headerImage: string }>`
   background-color: ${(props) => props.theme.colors.primary};
@@ -163,6 +164,9 @@ const Header: React.FC = () => {
         <StyledLink to="/plan" onClick={() => setIsMenuOpen(false)}>
           Plan
         </StyledLink>
+        <StyledLink to="/login" onClick={() => setIsMenuOpen(false)}>
+          {isAuthenticated() ? 'Login' : 'Logout'}
+        </StyledLink>
       </MobileMenu>
 
       <Nav>
@@ -170,6 +174,9 @@ const Header: React.FC = () => {
         <StyledLink to="/recipes">Recipes</StyledLink>
         <StyledLink to="/favorites">Favorites</StyledLink>
         <StyledLink to="/plan">Plan</StyledLink>
+        <StyledLink to="/login">
+          {isAuthenticated() ? 'Login' : 'Logout'}
+        </StyledLink>
       </Nav>
     </>
   );
