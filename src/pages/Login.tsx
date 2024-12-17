@@ -136,8 +136,8 @@ const Login = () => {
   const [form, setForm] = useState({ email: '', password: '' });
   const [message, setMessage] = useState('');
   const navigate = useNavigate();
-  const { isLoggedIn } = useAuth();
-
+  const { isLoggedIn, login } = useAuth();
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -146,12 +146,11 @@ const Login = () => {
     e.preventDefault();
     try {
       const response = await apiService.login(form);
-      console.log(response);
       const token = response.token;
       if (token) {
-        localStorage.setItem('token', token);
+        login(token); 
         setMessage('Login successful');
-        navigate('/favorites');
+        navigate('/'); 
       } else {
         setMessage('Token not found in response.');
       }
@@ -160,6 +159,7 @@ const Login = () => {
       setMessage(error.response?.data?.error || 'Login failed');
     }
   };
+
 
   return (
     <>
