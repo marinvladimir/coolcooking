@@ -17,7 +17,6 @@ import CookingTimeline from './CookingTimeline';
 import { StarIcon } from '../icons/icons';
 import axios from 'axios';
 import { useTheme } from '../states/ThemeContext';
-const { isLoggedIn } = useAuth();
 import { apiService } from '../api/api';
 import { useAuth } from '../states/AuthContext';
 
@@ -29,6 +28,7 @@ const CurrentRecipeModal: React.FC<CurrentRecipeModalProps> = ({
 }) => {
   const [isFavorite, setIsFavorite] = useState<boolean>(false);
   const { category } = useTheme();
+  const { isLoggedIn } = useAuth();
 
   const api = axios.create({
     baseURL: 'http://localhost:3000',
