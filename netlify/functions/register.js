@@ -4,7 +4,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 export const handler = async (event) => {
   const { username, email, password } = JSON.parse(event.body);
@@ -21,7 +24,7 @@ export const handler = async (event) => {
           password: hashedPassword,
         },
       ])
-      .select(); 
+      .select();
 
     if (dbError) {
       throw new Error(dbError.message);
@@ -45,7 +48,10 @@ export const handler = async (event) => {
     console.error('Error registering user:', err);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Registration failed', message: err.message }),
+      body: JSON.stringify({
+        error: 'Registration failed',
+        message: err.message,
+      }),
     };
   }
 };

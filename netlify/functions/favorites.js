@@ -4,10 +4,14 @@ import jwt from 'jsonwebtoken';
 
 dotenv.config();
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 export const handler = async (event) => {
-  const authHeader = event.headers['Authorization'] || event.headers['authorization'];
+  const authHeader =
+    event.headers['Authorization'] || event.headers['authorization'];
 
   if (!authHeader) {
     return {
@@ -16,7 +20,9 @@ export const handler = async (event) => {
     };
   }
 
-  const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const token = authHeader.startsWith('Bearer ')
+    ? authHeader.split(' ')[1]
+    : null;
 
   if (!token) {
     return {
@@ -27,7 +33,7 @@ export const handler = async (event) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.id; 
+    const userId = decoded.id;
 
     const { data, error } = await supabase
       .from('favorites')
@@ -39,7 +45,7 @@ export const handler = async (event) => {
     }
 
     if (data.length > 0) {
-      const recipeIds = data.map((fav) => fav.recipe_id); 
+      const recipeIds = data.map((fav) => fav.recipe_id);
       const { data: recipes, error: recipesError } = await supabase
         .from('recipes')
         .select('*')

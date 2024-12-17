@@ -375,6 +375,13 @@ export const ModalContent = styled.div`
   max-width: 800px;
   width: 100%;
   animation: expand 0.3s ease-out;
+  position: relative;
+
+  @media (max-width: 576px) {
+    max-height: 80%;
+    overflow-y: auto;
+    padding: 20px 10px;
+  }
 
   @keyframes expand {
     0% {

@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 export const handler = async (event) => {
   try {
@@ -20,11 +23,20 @@ export const handler = async (event) => {
         body: JSON.stringify({ error: 'Invalid JSON in request body' }),
       };
     }
-    const { title, description, category, ingredients, cooking_time, image_url } = body;
+    const {
+      title,
+      description,
+      category,
+      ingredients,
+      cooking_time,
+      image_url,
+    } = body;
     if (!title || !image_url) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: 'Missing required fields: title or image_url' }),
+        body: JSON.stringify({
+          error: 'Missing required fields: title or image_url',
+        }),
       };
     }
     let ingredientsArray = [];

@@ -3,16 +3,17 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 export async function handler(event) {
   try {
-    const { data, error } = await supabase
-      .from('recipes')
-      .select('*');
+    const { data, error } = await supabase.from('recipes').select('*');
 
     if (error) {
-      throw error; 
+      throw error;
     }
 
     return {

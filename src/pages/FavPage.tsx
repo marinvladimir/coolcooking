@@ -257,21 +257,17 @@ const FavPage: React.FC = () => {
     setHasStarted(false);
   };
 
-   const removeFavorite = async (recipeId: number) => {
-      try {
-          await apiService.toggleFavorite(
-            recipeId,
-            true
-          );
-          setFavorites((prevFavorites) =>
-            prevFavorites.filter((recipe) => recipe.id !== recipeId)
-          );
-          closeRecipeModal();
-      } catch (error) {
-        console.error('Error toggling favorite:', error);
-      }
-    };
-
+  const removeFavorite = async (recipeId: number) => {
+    try {
+      await apiService.toggleFavorite(recipeId, true);
+      setFavorites((prevFavorites) =>
+        prevFavorites.filter((recipe) => recipe.id !== recipeId)
+      );
+      closeRecipeModal();
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+    }
+  };
 
   return (
     <Content>

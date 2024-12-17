@@ -4,12 +4,19 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
 export const handler = async (event) => {
   const { recipeId } = event.queryStringParameters || {};
-  const authHeader = event.headers['Authorization'] || event.headers['authorization'];
-  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const authHeader =
+    event.headers['Authorization'] || event.headers['authorization'];
+  const token =
+    authHeader && authHeader.startsWith('Bearer ')
+      ? authHeader.split(' ')[1]
+      : null;
 
   if (!authHeader) {
     return {
@@ -35,7 +42,7 @@ export const handler = async (event) => {
         .select('*')
         .eq('user_id', userId)
         .eq('recipe_id', recipeId)
-        .maybeSingle(); 
+        .maybeSingle();
 
       if (error) throw error;
 
@@ -43,17 +50,16 @@ export const handler = async (event) => {
         statusCode: 200,
         body: JSON.stringify({ isFavorite: data ? true : false }),
       };
-    }
-
-    else if (event.httpMethod === 'POST') {
-      const { data, error } = await supabase
-        .from('favorites')
-        .upsert([
+    } else if (event.httpMethod === 'POST') {
+      const { data, error } = await supabase.from('favorites').upsert(
+        [
           {
             user_id: userId,
             recipe_id: recipeId,
           },
-        ], { onConflict: ['user_id', 'recipe_id'] }); 
+        ],
+        { onConflict: ['user_id', 'recipe_id'] }
+      );
 
       if (error) throw error;
 
@@ -61,9 +67,7 @@ export const handler = async (event) => {
         statusCode: 201,
         body: JSON.stringify({ favorite: data }),
       };
-    }
-
-    else if (event.httpMethod === 'DELETE') {
+    } else if (event.httpMethod === 'DELETE') {
       const { error } = await supabase
         .from('favorites')
         .delete()
@@ -74,7 +78,9 @@ export const handler = async (event) => {
         console.error('Error removing from favorites:', error);
         return {
           statusCode: 500,
-          body: JSON.stringify({ error: 'Failed to remove recipe from favorites' }),
+          body: JSON.stringify({
+            error: 'Failed to remove recipe from favorites',
+          }),
         };
       }
 
@@ -82,9 +88,7 @@ export const handler = async (event) => {
         statusCode: 200,
         body: JSON.stringify({ message: 'Recipe removed from favorites' }),
       };
-    }
-
-    else {
+    } else {
       return {
         statusCode: 405,
         body: JSON.stringify({ error: 'Method Not Allowed' }),
