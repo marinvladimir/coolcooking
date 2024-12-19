@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { getToken, isTokenValid } from './authUtils';
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -9,7 +10,10 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => !!localStorage.getItem('token'));
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    const token = getToken();
+    return isTokenValid(token);
+  });
 
   const login = (token: string) => {
     localStorage.setItem('token', token);
@@ -17,13 +21,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    clearToken();
     setIsLoggedIn(false);
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
+    const token = getToken();
+    if (!isTokenValid(token)) {
+      clearToken();
+      setIsLoggedIn(false);
+    }
   }, []);
 
   return (
@@ -40,3 +47,7 @@ export const useAuth = () => {
   }
   return context;
 };
+function clearToken() {
+  throw new Error('Function not implemented.');
+}
+
