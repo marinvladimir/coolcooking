@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { getToken, isTokenValid } from './authUtils';
+import { getToken, isTokenValid, logout as clearToken } from './authUtils';
 
 interface AuthContextType {
   isLoggedIn: boolean;
@@ -47,7 +47,3 @@ export const useAuth = () => {
   }
   return context;
 };
-function clearToken() {
-  throw new Error('Function not implemented.');
-}
-
