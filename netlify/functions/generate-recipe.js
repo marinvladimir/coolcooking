@@ -19,11 +19,16 @@ export const handler = async (event) => {
       const prompt = `Generate a recipe using these ingredients: ${ingredients.join(', ')}`;
   
       // Request to OpenAI API
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4',
+    //   const response = await openai.chat.completions.create({
+    //     model: 'gpt-4',
+    //     messages: [{ role: 'user', content: prompt }],
+    //   });
+    const response = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',  // Change from 'gpt-4' to 'gpt-3.5-turbo'
         messages: [{ role: 'user', content: prompt }],
       });
-  
+      
+
       console.log('OpenAI Response:', response); // Log full response for debugging
   
       // Ensure the response structure is correct
