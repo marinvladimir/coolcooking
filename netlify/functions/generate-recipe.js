@@ -1,8 +1,7 @@
 const { OpenAI } = require('openai');
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
@@ -17,17 +16,21 @@ exports.handler = async (event) => {
     }
 
     const prompt = `Generate a recipe using these ingredients: ${ingredients.join(', ')}`;
-    
+
+    // Request to OpenAI API
     const response = await openai.chat.completions.create({
       model: 'gpt-4',
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const recipe = response.choices[0].message?.content.trim();
+    console.log('OpenAI Response:', response); // Log full response for debugging
+
+    // Ensure the response structure is correct
+    const recipe = response?.choices?.[0]?.message?.content?.trim() || 'No recipe generated';
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ recipe: recipe || 'No recipe generated' }),
+      body: JSON.stringify({ recipe }),
     };
   } catch (error) {
     console.error('AI Recipe Generation Error:', error);
