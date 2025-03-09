@@ -1,49 +1,62 @@
-export const handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method Not Allowed' }),
-    };
-  }
-
-  const { ingredients } = JSON.parse(event.body || '{}');
-
-  if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Invalid ingredients' }),
-    };
-  }
-
-  const prompt = `Generate a recipe using these ingredients: ${ingredients.join(', ')}`;
-
-  try {
-    const response = await fetch('https://api-inference.huggingface.co/models/gpt2', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        inputs: prompt,
-        parameters: { max_length: 100 },
-      }),
-    });
-
-    const data = await response.json();
-    console.log('Hugging Face Response:', data);
-
-    const recipe = data[0]?.generated_text || 'No recipe generated';
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ recipe }),
-    };
-  } catch (error) {
-    console.error('AI Recipe Generation Error:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to generate recipe' }),
-    };
-  }
-};
+const fetchWithTimeout = (url, options, timeout = 10000) => {
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timed out')), timeout)
+    );
+  
+    return Promise.race([fetch(url, options), timeoutPromise]);
+  };
+  
+  export const handler = async (event) => {
+    if (event.httpMethod !== 'POST') {
+      return {
+        statusCode: 405,
+        body: JSON.stringify({ error: 'Method Not Allowed' }),
+      };
+    }
+  
+    const { ingredients } = JSON.parse(event.body || '{}');
+  
+    if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'Invalid ingredients' }),
+      };
+    }
+  
+    const prompt = `Generate a recipe using these ingredients: ${ingredients.join(', ')}`;
+  
+    try {
+      const response = await fetchWithTimeout(
+        'https://api-inference.huggingface.co/models/gpt2',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            inputs: prompt,
+            parameters: { max_length: 100 },
+          }),
+        },
+        10000 // Timeout duration (10 seconds)
+      );
+  
+      const data = await response.json();
+      console.log('Hugging Face Response:', data);
+  
+      const recipe = data[0]?.generated_text || 'No recipe generated';
+  
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ recipe }),
+      };
+    } catch (error) {
+      console.error('AI Recipe Generation Error:', error);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Failed to generate recipe' }),
+      };
+    }
+  };
+  
