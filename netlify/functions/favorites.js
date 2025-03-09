@@ -1,49 +1,75 @@
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
+
+dotenv.config();
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
+
 export const handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
+  const authHeader =
+    event.headers['Authorization'] || event.headers['authorization'];
+
+  if (!authHeader) {
     return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method Not Allowed' }),
+      statusCode: 401,
+      body: JSON.stringify({ error: 'Authorization header missing' }),
     };
   }
 
-  const { ingredients } = JSON.parse(event.body || '{}');
+  const token = authHeader.startsWith('Bearer ')
+    ? authHeader.split(' ')[1]
+    : null;
 
-  if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
+  if (!token) {
     return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Invalid ingredients' }),
+      statusCode: 401,
+      body: JSON.stringify({ error: 'Token missing or malformed' }),
     };
   }
-
-  const prompt = `Generate a recipe using these ingredients: ${ingredients.join(', ')}`;
 
   try {
-    const response = await fetch('https://api-inference.huggingface.co/models/gpt2', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        inputs: prompt,
-        parameters: { max_length: 100 },
-      }),
-    });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
 
-    const data = await response.json();
-    console.log('Hugging Face Response:', data);
+    const { data, error } = await supabase
+      .from('favorites')
+      .select('recipe_id')
+      .eq('user_id', userId);
 
-    const recipe = data[0]?.generated_text || 'No recipe generated';
+    if (error) {
+      throw new Error(error.message);
+    }
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ recipe }),
-    };
-  } catch (error) {
-    console.error('AI Recipe Generation Error:', error);
+    if (data.length > 0) {
+      const recipeIds = data.map((fav) => fav.recipe_id);
+      const { data: recipes, error: recipesError } = await supabase
+        .from('recipes')
+        .select('*')
+        .in('id', recipeIds);
+
+      if (recipesError) {
+        throw new Error(recipesError.message);
+      }
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ favorites: recipes }),
+      };
+    } else {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ favorites: [] }),
+      };
+    }
+  } catch (err) {
+    console.error('Error fetching favorites:', err);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to generate recipe' }),
+      body: JSON.stringify({ error: 'Error fetching favorites' }),
     };
   }
 };

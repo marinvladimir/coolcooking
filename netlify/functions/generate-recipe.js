@@ -1,5 +1,3 @@
-import axios from 'axios';
-
 export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return {
@@ -20,22 +18,19 @@ export const handler = async (event) => {
   const prompt = `Generate a recipe using these ingredients: ${ingredients.join(', ')}`;
 
   try {
-    // Using Axios to send the request
-    const response = await axios.post(
-      'https://api-inference.huggingface.co/models/gpt2',
-      {
+    const response = await fetch('https://api-inference.huggingface.co/models/gpt2', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         inputs: prompt,
         parameters: { max_length: 100 },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+      }),
+    });
 
-    const data = response.data;
+    const data = await response.json();
     console.log('Hugging Face Response:', data);
 
     const recipe = data[0]?.generated_text || 'No recipe generated';
