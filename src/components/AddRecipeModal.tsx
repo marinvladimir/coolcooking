@@ -213,7 +213,7 @@ const AddRecipeModal: React.FC<AddRecipeModalProps> = ({
               <ErrorMessage>{errors.cooking_time.message}</ErrorMessage>
             )}
 
-            <UploadButton type="button" onClick={generateRecipe} disabled={isSubmitting}>
+            <UploadButton type="button" onClick={() => generateRecipe()} disabled={isSubmitting}>
               {isSubmitting ? 'Generating...' : 'Generate Recipe with AI'}
             </UploadButton>
 
