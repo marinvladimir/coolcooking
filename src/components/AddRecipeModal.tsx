@@ -92,26 +92,26 @@ const AddRecipeModal: React.FC<AddRecipeModalProps> = ({
     }
   };
 
-  const generateRecipe = async () => {
-    if (selectedIngredients.length === 0) return;
+  // const generateRecipe = async () => {
+  //   if (selectedIngredients.length === 0) return;
     
-    try {
-      setIsSubmitting(true);
+  //   try {
+  //     setIsSubmitting(true);
       
-      const recipe = await apiService.fetchGeneratedRecipe(selectedIngredients);
-      console.log('Generated Recipe:', recipe);
+  //     const recipe = await apiService.fetchGeneratedRecipe(selectedIngredients);
+  //     console.log('Generated Recipe:', recipe);
 
-      // const data = await response.json();
-      // if (data.recipe) {
-      //   setValue('title', data.recipe.title);
-      //   setValue('description', data.recipe.description);
-      // }
-    } catch (error) {
-      console.error('Error generating recipe:', error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  //     // const data = await response.json();
+  //     // if (data.recipe) {
+  //     //   setValue('title', data.recipe.title);
+  //     //   setValue('description', data.recipe.description);
+  //     // }
+  //   } catch (error) {
+  //     console.error('Error generating recipe:', error);
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
   
 
   return (
@@ -212,11 +212,10 @@ const AddRecipeModal: React.FC<AddRecipeModalProps> = ({
             {errors.cooking_time && (
               <ErrorMessage>{errors.cooking_time.message}</ErrorMessage>
             )}
-
+{/* 
             <UploadButton type="button" onClick={() => generateRecipe()} disabled={isSubmitting}>
               {isSubmitting ? 'Generating...' : 'Generate Recipe with AI'}
-            </UploadButton>
-
+            </UploadButton> */}
 
             <FileInputWrapper>
               <HiddenInput
