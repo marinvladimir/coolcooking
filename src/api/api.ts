@@ -71,6 +71,18 @@ export const apiService = {
     }
   },
 
+    fetchGeneratedRecipe: async (ingredients: any) => {
+      try {
+        const response = await api.post('/generate-recipe', { ingredients });
+        return response.data.recipe;
+      } catch (error) {
+        console.error('Error generating recipe:', error);
+        showErrorNotification('Failed to generate recipe');
+        throw error;
+      }
+    },
+  
+
   fetchFavorites: async () => {
     try {
       const response = await api.get('/favorites');
