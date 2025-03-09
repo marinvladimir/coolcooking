@@ -18,7 +18,6 @@ export const handler = async (event) => {
     const prompt = `Create a detailed recipe using the following ingredients: ${ingredients.join(', ')}. The recipe should include instructions, preparation time, and serving details.`;
   
     try {
-      // Log the start time
       const startTime = Date.now();
   
       const response = await fetch('https://api-inference.huggingface.co/models/gpt2', {
@@ -29,11 +28,11 @@ export const handler = async (event) => {
         },
         body: JSON.stringify({
           inputs: prompt,
-          parameters: { max_length: 100 },
+          parameters: { max_length: 300, temperature: 0.7 },
         }),
       });
+      
   
-      // Log how long the request took
       const duration = Date.now() - startTime;
       console.log('API request duration: ', duration, 'ms');
   
@@ -41,7 +40,7 @@ export const handler = async (event) => {
       console.log('Hugging Face Response:', data);
   
       const recipe = data[0]?.generated_text || 'No recipe generated';
-  
+      
       return {
         statusCode: 200,
         body: JSON.stringify({ recipe }),
