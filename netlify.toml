@@ -3,6 +3,11 @@
   publish = "dist"
   command = "npm run build"
 
+[functions]
+  directory = "netlify/functions"
+  external_node_modules = ["node-fetch", "axios"]
+  timeout = 30
+
 [[redirects]]
   from = "/favorite/:recipeId"
   to = "/.netlify/functions/favorite"
@@ -15,7 +20,3 @@
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET"
     Access-Control-Allow-Headers = "Content-Type"
-
-[[functions]]
-timeout = 30
-
