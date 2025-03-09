@@ -1,9 +1,3 @@
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const fetch = globalThis.fetch
-
 export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return {
@@ -12,18 +6,18 @@ export const handler = async (event) => {
     };
   }
 
+  const { ingredients } = JSON.parse(event.body || '{}');
+
+  if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Invalid ingredients' }),
+    };
+  }
+
+  const prompt = `Generate a recipe using these ingredients: ${ingredients.join(', ')}`;
+
   try {
-    const { ingredients } = JSON.parse(event.body || '{}');
-
-    if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Invalid ingredients' }),
-      };
-    }
-
-    const prompt = `Generate a recipe using these ingredients: ${ingredients.join(', ')}`;
-
     const response = await fetch('https://api-inference.huggingface.co/models/gpt2', {
       method: 'POST',
       headers: {
