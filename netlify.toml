@@ -6,6 +6,8 @@
 [functions]
   directory = "netlify/functions"
   external_node_modules = ["node-fetch", "axios"]
+
+  [functions.timeout]
   timeout = 30
 
 [[redirects]]
