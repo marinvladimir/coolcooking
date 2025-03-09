@@ -1,6 +1,4 @@
-import { OpenAI } from 'openai';
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const fetch = require('node-fetch');
 
 export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -10,36 +8,44 @@ export const handler = async (event) => {
     };
   }
 
-  try {
-    const { ingredients } = JSON.parse(event.body || '{}');
-    if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
-        return { statusCode: 400, body: JSON.stringify({ error: 'Invalid ingredients' }) };
-      }
-  
-      const prompt = `Generate a recipe using these ingredients: ${ingredients.join(', ')}`;
-  
-      // Request to OpenAI API
-    //   const response = await openai.chat.completions.create({
-    //     model: 'gpt-4',
-    //     messages: [{ role: 'user', content: prompt }],
-    //   });
-    const response = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',  // Change from 'gpt-4' to 'gpt-3.5-turbo'
-        messages: [{ role: 'user', content: prompt }],
-      });
-      
+  const { ingredients } = JSON.parse(event.body || '{}');
 
-      console.log('OpenAI Response:', response); // Log full response for debugging
-  
-      // Ensure the response structure is correct
-      const recipe = response?.choices?.[0]?.message?.content?.trim() || 'No recipe generated';
-  
+  if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Invalid ingredients' }),
+    };
+  }
+
+  const prompt = `Generate a recipe using these ingredients: ${ingredients.join(', ')}`;
+
+  try {
+    const response = await fetch('https://api-inference.huggingface.co/models/gpt2', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputs: prompt,
+        parameters: { max_length: 100 },
+      }),
+    });
+
+    const data = await response.json();
+    console.log('Hugging Face Response:', data);
+
+    const recipe = data[0]?.generated_text || 'No recipe generated';
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ recipe: recipe || 'No recipe generated' }),
+      body: JSON.stringify({ recipe }),
     };
   } catch (error) {
     console.error('AI Recipe Generation Error:', error);
-    return { statusCode: 500, body: JSON.stringify({ error: 'Failed to generate recipe' }) };
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: 'Failed to generate recipe' }),
+    };
   }
 };
