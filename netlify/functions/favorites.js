@@ -1,7 +1,8 @@
-import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 
 dotenv.config();
+
+const fetch = globalThis.fetch
 
 export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
