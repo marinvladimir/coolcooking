@@ -1,12 +1,4 @@
-const fetchWithTimeout = (url, options, timeout = 10000) => {
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Request timed out')), timeout)
-    );
-  
-    return Promise.race([fetch(url, options), timeoutPromise]);
-  };
-  
-  export const handler = async (event) => {
+export const handler = async (event) => {
     if (event.httpMethod !== 'POST') {
       return {
         statusCode: 405,
@@ -26,21 +18,24 @@ const fetchWithTimeout = (url, options, timeout = 10000) => {
     const prompt = `Generate a recipe using these ingredients: ${ingredients.join(', ')}`;
   
     try {
-      const response = await fetchWithTimeout(
-        'https://api-inference.huggingface.co/models/gpt2',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            inputs: prompt,
-            parameters: { max_length: 100 },
-          }),
+      // Log the start time
+      const startTime = Date.now();
+  
+      const response = await fetch('https://api-inference.huggingface.co/models/gpt2', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
         },
-        10000 // Timeout duration (10 seconds)
-      );
+        body: JSON.stringify({
+          inputs: prompt,
+          parameters: { max_length: 100 },
+        }),
+      });
+  
+      // Log how long the request took
+      const duration = Date.now() - startTime;
+      console.log('API request duration: ', duration, 'ms');
   
       const data = await response.json();
       console.log('Hugging Face Response:', data);

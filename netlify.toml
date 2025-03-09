@@ -8,7 +8,7 @@
   external_node_modules = ["node-fetch", "axios"]
 
   [functions.timeout]
-  timeout = 30
+  timeout = 60  # 60 seconds timeout
 
 [[redirects]]
   from = "/favorite/:recipeId"
