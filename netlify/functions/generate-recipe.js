@@ -15,7 +15,7 @@ export const handler = async (event) => {
       };
     }
   
-    const prompt = `Generate a recipe using these ingredients: ${ingredients.join(', ')}`;
+    const prompt = `Create a detailed recipe using the following ingredients: ${ingredients.join(', ')}. The recipe should include instructions, preparation time, and serving details.`;
   
     try {
       // Log the start time
