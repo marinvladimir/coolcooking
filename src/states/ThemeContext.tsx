@@ -1,44 +1,23 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  ReactNode,
-  useEffect,
-} from 'react';
+import React, { ReactNode, useMemo, useState } from 'react';
+import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 import { themes } from '../styles/theme';
-
-export type Theme = typeof themes.soups;
-
-interface ThemeContextType {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  category: RecipeCategory;
-  setCategory: (category: RecipeCategory) => void;
-}
-
-const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+import type { CategoryFilter } from '../types';
+import { ThemeContext } from './contexts';
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [category, setCategory] = useState<RecipeCategory>('mainDishes');
-  const [theme, setTheme] = useState<Theme>(themes[category]);
+  const [category, setCategory] = useState<CategoryFilter>('all');
+  const theme = themes[category];
 
-  useEffect(() => {
-    setTheme(themes[category]);
-  }, [category]);
+  const value = useMemo(
+    () => ({ theme, category, setCategory }),
+    [theme, category]
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, category, setCategory }}>
-      {children}
+    <ThemeContext.Provider value={value}>
+      <StyledThemeProvider theme={theme}>{children}</StyledThemeProvider>
     </ThemeContext.Provider>
   );
-};
-
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error('useTheme must be used within a ThemeProvider');
-  }
-  return context;
 };

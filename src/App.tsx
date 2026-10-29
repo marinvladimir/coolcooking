@@ -1,78 +1,91 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import styled from 'styled-components';
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom';
+import { AnimatePresence, MotionConfig } from 'framer-motion';
+import { ToastContainer } from 'react-toastify';
 import { GlobalStyles } from './styles/GlobalStyles';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { ThemeProvider } from './states/ThemeContext';
+import { AuthProvider } from './states/AuthContext';
+import { useTheme } from './states/contexts';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import PrivateRoute from './components/PrivateRoute';
+import ScrollToTop from './components/ScrollToTop';
 import HomePage from './pages/HomePage';
 import RecipesPage from './pages/RecipesPage';
-import Header from './components/Header';
-import { ThemeProvider, useTheme } from './states/ThemeContext';
-import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 import FavPage from './pages/FavPage';
 import PlanPage from './pages/PlanPage';
 import Login from './pages/Login';
-import PrivateRoute from './components/PrivateRoute';
 import Register from './pages/Register';
-import { ToastContainer } from 'react-toastify';
-import { AuthProvider } from './states/AuthContext';
+import NotFound from './pages/NotFound';
 
-const Wrapper = styled.div`
+const Shell = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: ${(props) => props.theme.colors.background};
-  color: ${(props) => props.theme.colors.text};
 `;
 
-const Footer = styled.footer`
-  background-color: ${(props) => props.theme.colors.secondary};
-  color: ${(props) => props.theme.colors.background};
-  text-align: center;
-  padding: 1rem;
-  font-size: 0.9rem;
-  box-shadow: 0px -2px 6px rgba(0, 0, 0, 0.1);
-`;
+// The accent colour follows the selected recipe category on the recipes
+// page; every other page uses the default accent.
+const CategoryThemeReset: React.FC = () => {
+  const { pathname } = useLocation();
+  const { setCategory } = useTheme();
 
-const AppWrapper: React.FC<AppWrapperProps> = ({ children }) => {
-  const { theme } = useTheme();
+  useEffect(() => {
+    if (pathname !== '/recipes') setCategory('all');
+  }, [pathname, setCategory]);
+
+  return null;
+};
+
+const AnimatedRoutes: React.FC = () => {
+  const location = useLocation();
+
   return (
-    <StyledThemeProvider theme={theme}>
-      <GlobalStyles />
-      {children}
-    </StyledThemeProvider>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/recipes" element={<RecipesPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/favorites"
+          element={
+            <PrivateRoute>
+              <FavPage />
+            </PrivateRoute>
+          }
+        />
+        <Route path="/plan" element={<PlanPage />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </AnimatePresence>
   );
 };
 
-const App: React.FC = () => {
-  return (
+const App: React.FC = () => (
+  <MotionConfig reducedMotion="user">
     <AuthProvider>
       <ThemeProvider>
-        <AppWrapper>
-          <Router>
-            <Wrapper>
-              <Header />
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/recipes" element={<RecipesPage />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route
-                  path="/favorites"
-                  element={
-                    <PrivateRoute>
-                      <FavPage />
-                    </PrivateRoute>
-                  }
-                />
-                <Route path="/plan" element={<PlanPage />} />
-              </Routes>
-              <Footer>© 2024 Cooking Recipes. All rights reserved.</Footer>
-            </Wrapper>
-          </Router>
-          <ToastContainer />
-        </AppWrapper>
+        <GlobalStyles />
+        <Router>
+          <ScrollToTop />
+          <CategoryThemeReset />
+          <Shell>
+            <Header />
+            <AnimatedRoutes />
+            <Footer />
+          </Shell>
+        </Router>
+        <ToastContainer position="bottom-left" newestOnTop />
       </ThemeProvider>
     </AuthProvider>
-  );
-};
+  </MotionConfig>
+);
 
 export default App;

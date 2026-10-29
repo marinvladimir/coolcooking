@@ -1,49 +1,77 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { getToken, isTokenValid, logout as clearToken } from './authUtils';
+import React, {
+  ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import type { AuthUser } from '../types';
+import { showInfoNotification } from '../utils/notification';
+import {
+  AUTH_EXPIRED_EVENT,
+  clearSession,
+  getStoredUser,
+  getToken,
+  getTokenExpiry,
+  isTokenValid,
+  saveSession,
+} from './authUtils';
+import { AuthContext } from './contexts';
 
-interface AuthContextType {
-  isLoggedIn: boolean;
-  login: (token: string) => void;
-  logout: () => void;
-}
+// setTimeout overflows above ~24.8 days.
+const MAX_TIMEOUT = 2 ** 31 - 1;
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    const token = getToken();
-    return isTokenValid(token);
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const [token, setToken] = useState<string | null>(() => {
+    const stored = getToken();
+    if (isTokenValid(stored)) return stored;
+    clearSession();
+    return null;
   });
+  const [user, setUser] = useState<AuthUser | null>(() =>
+    token ? getStoredUser() : null
+  );
 
-  const login = (token: string) => {
-    localStorage.setItem('token', token);
-    setIsLoggedIn(true);
-  };
-
-  const logout = () => {
-    clearToken();
-    setIsLoggedIn(false);
-  };
-
-  useEffect(() => {
-    const token = getToken();
-    if (!isTokenValid(token)) {
-      clearToken();
-      setIsLoggedIn(false);
-    }
+  const login = useCallback((newToken: string, newUser: AuthUser) => {
+    saveSession(newToken, newUser);
+    setToken(newToken);
+    setUser(newUser);
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ isLoggedIn, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
+  const logout = useCallback(() => {
+    clearSession();
+    setToken(null);
+    setUser(null);
+  }, []);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  // Log out automatically once the token expires or the server rejects it.
+  useEffect(() => {
+    if (!token) return;
+
+    const expire = () => {
+      logout();
+      showInfoNotification('Your session has expired. Please log in again.');
+    };
+
+    const expiry = getTokenExpiry(token) ?? 0;
+    const timer = window.setTimeout(
+      expire,
+      Math.min(Math.max(expiry - Date.now(), 0), MAX_TIMEOUT)
+    );
+    window.addEventListener(AUTH_EXPIRED_EVENT, expire);
+
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener(AUTH_EXPIRED_EVENT, expire);
+    };
+  }, [token, logout]);
+
+  const value = useMemo(
+    () => ({ isLoggedIn: Boolean(token), user, login, logout }),
+    [token, user, login, logout]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

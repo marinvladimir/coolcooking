@@ -1,88 +1,65 @@
-export const themes: Record<
-  RecipeCategory,
-  {
-    colors: {
-      primary: string;
-      secondary: string;
-      background: string;
-      lightBackground: string;
-      accent: string;
-      headerImage: string;
-      text: string;
-      border: string;
-      disabled: string;
-      disabledText: string;
-    };
-  }
-> = {
-  soups: {
-    colors: {
-      primary: '#ffcc00',
-      secondary: '#ff9900',
-      background: '#fff8e1',
-      lightBackground: '#fff3c1',
-      accent: '#ff6600',
-      headerImage: '/assets/soup.png',
-      text: '#6b4226',
-      border: '#ff6600',
-      disabled: '#ffe6b3',
-      disabledText: '#a65400',
-    },
-  },
-  desserts: {
-    colors: {
-      primary: '#ff99cc',
-      secondary: '#ff6699',
-      background: '#ffe4f1',
-      lightBackground: '#ffe1f3',
-      accent: '#cc3366',
-      headerImage: '/assets/desserts.png',
-      text: '#6b4226',
-      border: '#cc3366',
-      disabled: '#ffeaf4',
-      disabledText: '#993355',
-    },
-  },
-  salads: {
-    colors: {
-      primary: '#66cc33',
-      secondary: '#009900',
-      background: '#f1ffe4',
-      lightBackground: '#e1ffc1',
-      accent: '#ff7043',
-      headerImage: '/assets/salads.png',
-      text: '#2e8b57',
-      border: '#ff7043',
-      disabled: '#e6ffd9',
-      disabledText: '#338c27',
-    },
-  },
-  mainDishes: {
-    colors: {
-      primary: '#cc0000',
-      secondary: '#990000',
-      background: '#ffe4e4',
-      lightBackground: '#ffcccc',
-      accent: '#660000',
-      headerImage: '/assets/mainMeal.png',
-      text: '#8b3d3d',
-      border: '#8b3d3d',
-      disabled: '#ffd6d6',
-      disabledText: '#992626',
-    },
-  },
-  drinks: {
-    colors: {
-      primary: '#0099cc',
-      secondary: '#006699',
-      background: '#e1f4ff',
-      lightBackground: '#c1e9ff',
-      accent: '#004466',
-      headerImage: '/assets/drinks.png',
-      text: '#004d73',
-      border: '#004466',
-      disabled: '#d8f0ff',
-      disabledText: '#336073',
-    },
-  },
+import type { CategoryFilter, RecipeCategory } from '../types';
+
+export const INK = '#151210';
+
+export const palette = {
+  tomato: '#ff5a36',
+  mustard: '#ffc23d',
+  mint: '#3fd99a',
+  bubblegum: '#ff8ccf',
+  sky: '#5cc8ff',
+  grape: '#a58bff',
 };
+
+// Every category owns a bold accent plus a pale tint for large surfaces.
+export const CATEGORY_COLORS: Record<
+  RecipeCategory,
+  { accent: string; soft: string }
+> = {
+  mainDishes: { accent: palette.tomato, soft: '#ffd8cc' },
+  soups: { accent: palette.mustard, soft: '#ffecbf' },
+  salads: { accent: palette.mint, soft: '#c8f5e1' },
+  desserts: { accent: palette.bubblegum, soft: '#ffdcef' },
+  drinks: { accent: palette.sky, soft: '#d2efff' },
+};
+
+const accents: Record<CategoryFilter, { accent: string; soft: string }> = {
+  all: CATEGORY_COLORS.mainDishes,
+  ...CATEGORY_COLORS,
+};
+
+const makeTheme = (category: CategoryFilter) => ({
+  colors: {
+    paper: '#fff3df',
+    surface: '#fffdf7',
+    ink: INK,
+    inkSoft: '#3d3530',
+    muted: '#5e544c',
+    accent: accents[category].accent,
+    accentSoft: accents[category].soft,
+    success: '#13854a',
+    error: '#d62c1a',
+    overlay: 'rgba(21, 18, 16, 0.6)',
+    ...palette,
+  },
+  fonts: {
+    display: "'Bricolage Grotesque', system-ui, sans-serif",
+    body: "'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', sans-serif",
+    pixel: "'Silkscreen', 'Courier New', monospace",
+  },
+  border: `3px solid ${INK}`,
+  radius: { sm: '10px', md: '14px', lg: '22px', pill: '999px' },
+  shadow: {
+    sm: `3px 3px 0 ${INK}`,
+    md: `5px 5px 0 ${INK}`,
+    lg: `8px 8px 0 ${INK}`,
+    xl: `12px 12px 0 ${INK}`,
+  },
+  breakpoints: { sm: '640px', md: '960px' },
+});
+
+export type AppTheme = ReturnType<typeof makeTheme>;
+
+export const themes = Object.fromEntries(
+  (Object.keys(accents) as CategoryFilter[]).map((key) => [key, makeTheme(key)])
+) as Record<CategoryFilter, AppTheme>;

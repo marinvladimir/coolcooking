@@ -1,76 +1,56 @@
-import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcrypt';
-import dotenv from 'dotenv';
+import supabase from '../lib/supabase.js';
+import { escapeLike, json, parseBody } from '../lib/http.js';
 
-dotenv.config();
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const handler = async (event) => {
-  const { username, email, password } = JSON.parse(event.body);
+  if (event.httpMethod !== 'POST') {
+    return json(405, { error: 'Method Not Allowed' });
+  }
+
+  const body = parseBody(event);
+  const username = String(body?.username ?? '').trim();
+  const email = String(body?.email ?? '')
+    .trim()
+    .toLowerCase();
+  const password = String(body?.password ?? '');
+
+  if (username.length < 2 || username.length > 40) {
+    return json(400, { error: 'Username must be 2–40 characters long' });
+  }
+  if (!EMAIL_PATTERN.test(email)) {
+    return json(400, { error: 'Please enter a valid email address' });
+  }
+  if (password.length < 6) {
+    return json(400, { error: 'Password must be at least 6 characters' });
+  }
 
   try {
     const { data: existingUsers, error: fetchError } = await supabase
       .from('users')
       .select('id')
-      .eq('email', email);
+      .ilike('email', escapeLike(email));
 
-    if (fetchError) {
-      throw new Error(`Error checking existing email: ${fetchError.message}`);
-    }
+    if (fetchError) throw fetchError;
 
     if (existingUsers.length > 0) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({
-          error: 'Registration failed',
-          message: 'Email already exists',
-        }),
-      };
+      return json(409, { error: 'An account with this email already exists' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const { data, error: dbError } = await supabase
       .from('users')
-      .insert([
-        {
-          username,
-          email,
-          password: hashedPassword,
-        },
-      ])
-      .select();
+      .insert([{ username, email, password: hashedPassword }])
+      .select('id, username, email')
+      .single();
 
-    if (dbError) {
-      throw new Error(dbError.message);
-    }
+    if (dbError) throw dbError;
 
-    if (!data || data.length === 0) {
-      throw new Error('No data returned after insert');
-    }
-
-    return {
-      statusCode: 201,
-      body: JSON.stringify({
-        user: {
-          id: data[0].id,
-          username,
-          email,
-        },
-      }),
-    };
+    return json(201, { user: data });
   } catch (err) {
     console.error('Error registering user:', err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        error: 'Registration failed',
-        message: err.message,
-      }),
-    };
+    return json(500, { error: 'Registration failed. Please try again later.' });
   }
 };

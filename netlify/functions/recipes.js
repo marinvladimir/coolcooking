@@ -1,30 +1,22 @@
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
+import supabase from '../lib/supabase.js';
+import { json } from '../lib/http.js';
 
-dotenv.config();
+export const handler = async (event) => {
+  if (event.httpMethod !== 'GET') {
+    return json(405, { error: 'Method Not Allowed' });
+  }
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
-
-export async function handler(event) {
   try {
-    const { data, error } = await supabase.from('recipes').select('*');
+    const { data, error } = await supabase
+      .from('recipes')
+      .select('*')
+      .order('id', { ascending: false });
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify(data),
-    };
+    return json(200, data);
   } catch (err) {
     console.error('Error fetching recipes:', err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: 'Error fetching recipes' }),
-    };
+    return json(500, { error: 'Error fetching recipes' });
   }
-}
+};

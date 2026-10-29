@@ -1,104 +1,56 @@
-import { createClient } from '@supabase/supabase-js';
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
+import supabase from '../lib/supabase.js';
+import { getUserId, json, unauthorized } from '../lib/http.js';
 
 export const handler = async (event) => {
-  const { recipeId } = event.queryStringParameters || {};
-  const authHeader =
-    event.headers['Authorization'] || event.headers['authorization'];
-  const token =
-    authHeader && authHeader.startsWith('Bearer ')
-      ? authHeader.split(' ')[1]
-      : null;
+  const userId = getUserId(event);
+  if (!userId) return unauthorized();
 
-  if (!authHeader) {
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ error: 'Authorization header missing' }),
-    };
-  }
-
-  if (!recipeId) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Recipe ID is required' }),
-    };
+  const recipeId = Number(event.queryStringParameters?.recipeId);
+  if (!Number.isInteger(recipeId) || recipeId <= 0) {
+    return json(400, { error: 'A valid recipe ID is required' });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.id;
+    switch (event.httpMethod) {
+      case 'GET': {
+        const { data, error } = await supabase
+          .from('favorites')
+          .select('recipe_id')
+          .eq('user_id', userId)
+          .eq('recipe_id', recipeId)
+          .maybeSingle();
 
-    if (event.httpMethod === 'GET') {
-      const { data, error } = await supabase
-        .from('favorites')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('recipe_id', recipeId)
-        .maybeSingle();
-
-      if (error) throw error;
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ isFavorite: data ? true : false }),
-      };
-    } else if (event.httpMethod === 'POST') {
-      const { data, error } = await supabase.from('favorites').upsert(
-        [
-          {
-            user_id: userId,
-            recipe_id: recipeId,
-          },
-        ],
-        { onConflict: ['user_id', 'recipe_id'] }
-      );
-
-      if (error) throw error;
-
-      return {
-        statusCode: 201,
-        body: JSON.stringify({ favorite: data }),
-      };
-    } else if (event.httpMethod === 'DELETE') {
-      const { error } = await supabase
-        .from('favorites')
-        .delete()
-        .eq('user_id', userId)
-        .eq('recipe_id', recipeId);
-
-      if (error) {
-        console.error('Error removing from favorites:', error);
-        return {
-          statusCode: 500,
-          body: JSON.stringify({
-            error: 'Failed to remove recipe from favorites',
-          }),
-        };
+        if (error) throw error;
+        return json(200, { isFavorite: Boolean(data) });
       }
 
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ message: 'Recipe removed from favorites' }),
-      };
-    } else {
-      return {
-        statusCode: 405,
-        body: JSON.stringify({ error: 'Method Not Allowed' }),
-      };
+      case 'POST': {
+        const { error } = await supabase
+          .from('favorites')
+          .upsert([{ user_id: userId, recipe_id: recipeId }], {
+            onConflict: 'user_id,recipe_id',
+          });
+
+        if (error) throw error;
+        return json(201, { isFavorite: true });
+      }
+
+      case 'DELETE': {
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', userId)
+          .eq('recipe_id', recipeId);
+
+        if (error) throw error;
+        return json(200, { isFavorite: false });
+      }
+
+      default:
+        return json(405, { error: 'Method Not Allowed' });
     }
   } catch (err) {
-    console.error('JWT verification error:', err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Internal Server Error' }),
-    };
+    console.error('Error updating favorite:', err);
+    return json(500, { error: 'Could not update favorites' });
   }
 };
