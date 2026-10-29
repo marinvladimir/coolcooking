@@ -1,201 +1,236 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
-import { Link } from 'react-router-dom';
-import { useTheme } from '../states/ThemeContext';
-import { useAuth } from '../states/AuthContext';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../states/contexts';
+import { CloseIcon, MenuIcon } from '../icons/icons';
+import { Button, Container } from '../styles/ui';
 
-const HeaderWrapper = styled.header<{ $headerImage: string }>`
-  background-color: ${(props) => props.theme.colors.primary};
-  color: ${(props) => props.theme.colors.background};
-  padding: 2rem;
-  text-align: center;
-  font-size: 2rem;
-  font-weight: bold;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-  position: relative;
-  background-image: ${(props) => `url(${props.$headerImage})`};
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  height: 150px;
-  overflow: hidden;
-  transition: background-image 0.3s ease-in-out;
+const Bar = styled.header`
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: ${({ theme }) => theme.colors.background}ee;
+  backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
 
-  h1 {
-    position: absolute;
-    bottom: 1rem;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 3rem;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+const Inner = styled(Container)`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  height: 72px;
+`;
+
+const Brand = styled(Link)`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  font-family: ${({ theme }) => theme.fonts.heading};
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+
+  img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+  }
+
+  span {
+    color: ${({ theme }) => theme.colors.primary};
+    transition: color 0.3s ease;
   }
 `;
 
-const Nav = styled.nav`
+const DesktopNav = styled.nav`
   display: flex;
-  justify-content: center;
-  background-color: ${(props) => props.theme.colors.secondary};
-  padding: 1rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  align-items: center;
+  gap: 0.25rem;
 
-  @media (max-width: 768px) {
+  @media (max-width: ${({ theme }) => theme.breakpoints.md}) {
     display: none;
   }
 `;
 
-const StyledLink = styled(Link)`
-  margin: 0 1.5rem;
+const NavItem = styled(NavLink)`
+  position: relative;
+  padding: 0.5rem 0.9rem;
+  font-weight: 600;
   text-decoration: none;
-  color: ${(props) => props.theme.colors.background};
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-size: 1.1rem;
+  color: ${({ theme }) => theme.colors.textMuted};
+  border-radius: ${({ theme }) => theme.radius.pill};
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
 
   &:hover {
-    color: ${(props) => props.theme.colors.accent};
-    transform: translateY(-2px);
-    transition: transform 0.3s ease;
+    color: ${({ theme }) => theme.colors.text};
+    background: ${({ theme }) => theme.colors.surfaceAlt};
+  }
+
+  &.active {
+    color: ${({ theme }) => theme.colors.primaryDark};
+    background: ${({ theme }) => theme.colors.primarySoft};
   }
 `;
 
-const BurgerContainer = styled.div`
-  display: none;
-  cursor: pointer;
-  position: absolute;
-  top: 20px;
-  right: 20px;
+const Actions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 
-  @media (max-width: 768px) {
-    display: block;
-  }
-`;
-
-export const BurgerIcon = styled.div<{ $isOpen: boolean }>`
-  width: 30px;
-  height: 3px;
-  background-color: ${(props) => props.theme.colors.background};
-  border-radius: 2px;
-  position: relative;
-  transition: all 0.3s ease-in-out;
-  cursor: pointer;
-
-  &::before,
-  &::after {
-    content: '';
-    position: absolute;
-    width: 30px;
-    height: 3px;
-    background-color: ${(props) => props.theme.colors.background};
-    border-radius: 2px;
-    transition: all 0.3s ease-in-out;
-  }
-
-  &::before {
-    top: -10px;
-  }
-
-  &::after {
-    top: 10px;
-  }
-
-  ${({ $isOpen }: { $isOpen: boolean }) =>
-    $isOpen &&
-    `
-      background-color: transparent;
-
-      &::before {
-        transform: rotate(45deg);
-        top: 0;
-      }
-
-      &::after {
-        transform: rotate(-45deg);
-        top: 0;
-      }
-    `}
-`;
-
-const MobileMenu = styled.div<{ $isOpen: boolean }>`
-  display: ${(props) => (props.$isOpen ? 'grid' : 'none')};
-  grid-template-columns: 1fr;
-  position: absolute;
-  top: 150px;
-  right: 0;
-  background-color: ${(props) => props.theme.colors.secondary};
-  width: 100%;
-  padding: 2rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  gap: 1rem;
-
-  @media (min-width: 769px) {
+  @media (max-width: ${({ theme }) => theme.breakpoints.md}) {
     display: none;
   }
 `;
 
-const Header: React.FC = () => {
-  const { theme } = useTheme();
-  const { isLoggedIn, logout } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+const Greeting = styled.span`
+  font-size: 0.9rem;
+  color: ${({ theme }) => theme.colors.textMuted};
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
-  const toggleMenu = () => {
-    setIsMenuOpen((prev) => !prev);
+  strong {
+    color: ${({ theme }) => theme.colors.text};
+  }
+`;
+
+const MenuButton = styled.button`
+  display: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.colors.surface};
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.md}) {
+    display: grid;
+  }
+`;
+
+const MobilePanel = styled.div`
+  display: none;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.background};
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.md}) {
+    display: block;
+  }
+
+  nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding-top: 1rem;
+    padding-bottom: 1.25rem;
+  }
+
+  ${NavItem} {
+    padding: 0.8rem 1rem;
+    border-radius: ${({ theme }) => theme.radius.md};
+  }
+`;
+
+const NAV_LINKS = [
+  { to: '/', label: 'Home', end: true },
+  { to: '/recipes', label: 'Recipes' },
+  { to: '/favorites', label: 'Favorites' },
+  { to: '/plan', label: 'Meal planner' },
+];
+
+const Header: React.FC = () => {
+  const { isLoggedIn, user, logout } = useAuth();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setIsMenuOpen(false);
+  }, [pathname]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
   };
 
+  const links = NAV_LINKS.map(({ to, label, end }) => (
+    <NavItem key={to} to={to} end={end}>
+      {label}
+    </NavItem>
+  ));
+
   return (
-    <>
-      <HeaderWrapper $headerImage={theme.colors.headerImage}>
-        <h1>Cooking Recipes</h1>
-      </HeaderWrapper>
+    <Bar>
+      <Inner>
+        <Brand to="/" aria-label="Cool Cooking – home">
+          <img src="/food.png" alt="" />
+          Cool <span>Cooking</span>
+        </Brand>
 
-      <BurgerContainer onClick={toggleMenu}>
-        <BurgerIcon $isOpen={isMenuOpen} />
-      </BurgerContainer>
+        <DesktopNav aria-label="Main">{links}</DesktopNav>
 
-      <MobileMenu $isOpen={isMenuOpen}>
-        <StyledLink to="/" onClick={() => setIsMenuOpen(false)}>
-          Home
-        </StyledLink>
-        <StyledLink to="/recipes" onClick={() => setIsMenuOpen(false)}>
-          Recipes
-        </StyledLink>
-        <StyledLink to="/favorites" onClick={() => setIsMenuOpen(false)}>
-          Favorites
-        </StyledLink>
-        <StyledLink to="/plan" onClick={() => setIsMenuOpen(false)}>
-          Plan
-        </StyledLink>
-        {isLoggedIn ? (
-          <StyledLink
-            to="/"
-            onClick={() => {
-              logout();
-              setIsMenuOpen(false);
-            }}
-          >
-            Logout
-          </StyledLink>
-        ) : (
-          <StyledLink to="/login" onClick={() => setIsMenuOpen(false)}>
-            Login
-          </StyledLink>
-        )}
-      </MobileMenu>
+        <Actions>
+          {isLoggedIn ? (
+            <>
+              {user && (
+                <Greeting>
+                  Hi, <strong>{user.username}</strong>
+                </Greeting>
+              )}
+              <Button $variant="secondary" $size="sm" onClick={handleLogout}>
+                Log out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button as={Link} to="/login" $variant="ghost" $size="sm">
+                Log in
+              </Button>
+              <Button as={Link} to="/register" $size="sm">
+                Sign up
+              </Button>
+            </>
+          )}
+        </Actions>
 
-      <Nav>
-        <StyledLink to="/">Home</StyledLink>
-        <StyledLink to="/recipes">Recipes</StyledLink>
-        <StyledLink to="/favorites">Favorites</StyledLink>
-        <StyledLink to="/plan">Plan</StyledLink>
-        {isLoggedIn ? (
-          <StyledLink to="/" onClick={logout}>
-            Logout
-          </StyledLink>
-        ) : (
-          <StyledLink to="/login">Login</StyledLink>
-        )}
-      </Nav>
-    </>
+        <MenuButton
+          type="button"
+          aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={isMenuOpen}
+          aria-controls="mobile-menu"
+          onClick={() => setIsMenuOpen((open) => !open)}
+        >
+          {isMenuOpen ? <CloseIcon /> : <MenuIcon />}
+        </MenuButton>
+      </Inner>
+
+      {isMenuOpen && (
+        <MobilePanel id="mobile-menu">
+          <Container as="nav" aria-label="Mobile">
+            {links}
+            {isLoggedIn ? (
+              <Button $variant="secondary" onClick={handleLogout}>
+                Log out{user ? ` (${user.username})` : ''}
+              </Button>
+            ) : (
+              <>
+                <Button as={Link} to="/login" $variant="secondary">
+                  Log in
+                </Button>
+                <Button as={Link} to="/register">
+                  Sign up
+                </Button>
+              </>
+            )}
+          </Container>
+        </MobilePanel>
+      )}
+    </Bar>
   );
 };
 

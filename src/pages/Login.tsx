@@ -1,201 +1,114 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
-import { apiService } from '../api/api';
-import { useAuth } from '../states/AuthContext';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { apiService, getErrorMessage } from '../api/api';
+import { useAuth } from '../states/contexts';
+import { Button, Field, Input, Label } from '../styles/ui';
+import { showSuccessNotification } from '../utils/notification';
+import AuthLayout, {
+  AuthForm,
+  FormError,
+  Switch,
+} from '../components/AuthLayout';
+import Spinner from '../components/Spinner';
 
-const Form = styled.form`
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  max-width: 400px;
-  margin: auto;
-  background-color: ${({ theme }) => theme.colors.background};
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  width: 100%;
-`;
+type LocationState = { from?: string; email?: string } | null;
 
-const Input = styled.input`
-  padding: 0.75rem;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 8px;
-  background-color: ${({ theme }) => theme.colors.lightBackground};
-  color: ${({ theme }) => theme.colors.text};
-  font-size: 1rem;
-  transition: border-color 0.3s ease;
-
-  &:focus {
-    outline: none;
-    border-color: ${({ theme }) => theme.colors.primary};
-  }
-`;
-
-const Button = styled.button`
-  background-color: ${({ theme }) => theme.colors.primary};
-  color: ${({ theme }) => theme.colors.background};
-  padding: 0.75rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-  font-size: 1rem;
-  transition:
-    background-color 0.3s ease,
-    transform 0.3s ease;
-
-  &:hover {
-    background-color: ${({ theme }) => theme.colors.accent};
-    transform: translateY(-2px);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-`;
-
-const Wrapper = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh; /* Full-screen height */
-  background-color: ${({ theme }) => theme.colors.background};
-  padding: 1rem;
-`;
-
-const Card = styled.div`
-  background-color: ${({ theme }) => theme.colors.lightBackground};
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  padding: 2rem;
-  text-align: center;
-  max-width: 400px;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-`;
-
-const Title = styled.h2`
-  margin-bottom: 1rem;
-  font-size: 1.5rem;
-  color: ${({ theme }) => theme.colors.text};
-`;
-
-const Nav = styled.nav`
-  display: flex;
-  justify-content: center;
-  margin-top: 1rem;
-`;
-
-const StyledLink = styled(Link)`
-  text-decoration: none;
-  color: ${({ theme }) => theme.colors.primary};
-  font-weight: bold;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  padding: 0.5rem;
-  border-radius: 4px;
-  transition:
-    color 0.3s ease,
-    transform 0.3s ease;
-
-  &:hover {
-    color: ${({ theme }) => theme.colors.accent};
-    transform: translateY(-2px);
-  }
-
-  &:active {
-    transform: translateY(0);
-  }
-`;
-
-const LogoutPage = () => {
+const Login: React.FC = () => {
+  const location = useLocation();
+  const state = location.state as LocationState;
+  const [form, setForm] = useState({ email: state?.email ?? '', password: '' });
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { isLoggedIn, user, login, logout } = useAuth();
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    navigate('/');
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [event.target.name]: event.target.value });
   };
 
-  return (
-    <Wrapper>
-      <Card>
-        <Title>You are logged in</Title>
-        <p>Would you like to log out?</p>
-        <Button onClick={handleLogout}>Log Out</Button>
-        <StyledLink to="/favorites">Go to Favorites</StyledLink>
-      </Card>
-    </Wrapper>
-  );
-};
-
-const Login = () => {
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [message, setMessage] = useState('');
-  const navigate = useNavigate();
-  const { isLoggedIn, login } = useAuth();
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError('');
+    setIsSubmitting(true);
     try {
-      const response = await apiService.login(form);
-      const token = response.token;
-      if (token) {
-        login(token); 
-        setMessage('Login successful');
-        navigate('/'); 
-      } else {
-        setMessage('Token not found in response.');
-      }
-    } catch (error: any) {
-      console.error('Error:', error);
-      setMessage(error.response?.data?.error || 'Login failed');
+      const { token, user } = await apiService.login(form);
+      login(token, user);
+      showSuccessNotification(`Welcome back, ${user.username}!`);
+      navigate(state?.from ?? '/recipes', { replace: true });
+    } catch (err) {
+      setError(getErrorMessage(err, 'Login failed. Please try again.'));
+      setIsSubmitting(false);
     }
   };
 
+  if (isLoggedIn) {
+    return (
+      <AuthLayout
+        title="You’re logged in"
+        subtitle={`Signed in as ${user?.email ?? 'a Cool Cooking member'}.`}
+      >
+        <AuthForm as="div">
+          <Button as={Link} to="/favorites" $block>
+            Go to my favorites
+          </Button>
+          <Button
+            type="button"
+            $variant="secondary"
+            $block
+            onClick={() => {
+              logout();
+              navigate('/');
+            }}
+          >
+            Log out
+          </Button>
+        </AuthForm>
+      </AuthLayout>
+    );
+  }
 
   return (
-    <>
-      {isLoggedIn ? (
-        <LogoutPage />
-      ) : (
-        <Wrapper>
-          <Card>
-            <Title>Login</Title>
-            <Form onSubmit={handleSubmit}>
-              <Input
-                name="email"
-                type="email"
-                placeholder="Email"
-                onChange={handleChange}
-                required
-              />
-              <Input
-                name="password"
-                type="password"
-                placeholder="Password"
-                onChange={handleChange}
-                required
-              />
-              <Button type="submit">Login</Button>
-              <p>{message}</p>
-              <Nav>
-                <StyledLink to="/register">
-                  Don't have an account? Register here
-                </StyledLink>
-              </Nav>
-            </Form>
-          </Card>
-        </Wrapper>
-      )}
-    </>
+    <AuthLayout
+      title="Welcome back"
+      subtitle="Log in to save favorites and share your recipes."
+    >
+      <AuthForm onSubmit={handleSubmit}>
+        {error && <FormError role="alert">{error}</FormError>}
+        <Field>
+          <Label htmlFor="login-email">Email</Label>
+          <Input
+            id="login-email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            value={form.email}
+            onChange={handleChange}
+            required
+          />
+        </Field>
+        <Field>
+          <Label htmlFor="login-password">Password</Label>
+          <Input
+            id="login-password"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            placeholder="Your password"
+            value={form.password}
+            onChange={handleChange}
+            required
+          />
+        </Field>
+        <Button type="submit" $block $size="lg" disabled={isSubmitting}>
+          {isSubmitting && <Spinner />}
+          {isSubmitting ? 'Logging in…' : 'Log in'}
+        </Button>
+      </AuthForm>
+      <Switch>
+        New to Cool Cooking? <Link to="/register">Create an account</Link>
+      </Switch>
+    </AuthLayout>
   );
 };
 

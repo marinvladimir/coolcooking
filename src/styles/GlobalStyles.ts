@@ -1,49 +1,77 @@
-import { createGlobalStyle, keyframes } from 'styled-components';
+import { createGlobalStyle } from 'styled-components';
 
 export const GlobalStyles = createGlobalStyle`
- * {
+  *,
+  *::before,
+  *::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
   }
 
-   body {
-    margin: 0;
-    padding: 0;
-    font-family: "Raleway", sans-serif;
-    background-color: ${(props) => props.theme.colors.background};
-    color: ${(props) => props.theme.colors.text};
-    transition: background-color 0.5s ease, color 0.5s ease;
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: ${({ theme }) => theme.fonts.body};
+    font-size: 16px;
+    line-height: 1.6;
+    background-color: ${({ theme }) => theme.colors.background};
+    color: ${({ theme }) => theme.colors.text};
+    font-variant-numeric: lining-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 {
+    font-family: ${({ theme }) => theme.fonts.heading};
+    line-height: 1.2;
+    font-weight: 700;
+  }
+
+  img {
+    display: block;
+    max-width: 100%;
+  }
+
+  a {
+    color: inherit;
   }
 
   input,
-textarea,
-select,
-button {
-  font-family: "Raleway", sans-serif;
-}
-
-    ::-webkit-scrollbar {
-    width: 12px;
+  textarea,
+  select,
+  button {
+    font: inherit;
+    color: inherit;
   }
 
-  ::-webkit-scrollbar-track {
-    background: white;
+  button {
+    cursor: pointer;
   }
 
-  ::-webkit-scrollbar-thumb {
-    background: ${(props) => props.theme.colors.text};
-    border-radius: 10px;
+  :focus-visible {
+    outline: 3px solid ${({ theme }) => theme.colors.primary};
+    outline-offset: 2px;
   }
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: ${(props) => props.theme.colors.accent};
+  ::selection {
+    background: ${({ theme }) => theme.colors.primarySoft};
   }
-    
-`;
 
-export const fadeAnimation = keyframes`
-0% { opacity: 1; }
-50% { opacity: 0; }
-100% { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  .Toastify__toast {
+    font-family: ${({ theme }) => theme.fonts.body};
+    border-radius: ${({ theme }) => theme.radius.md};
+  }
 `;

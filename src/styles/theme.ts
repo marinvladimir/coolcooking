@@ -1,88 +1,64 @@
-export const themes: Record<
-  RecipeCategory,
-  {
-    colors: {
-      primary: string;
-      secondary: string;
-      background: string;
-      lightBackground: string;
-      accent: string;
-      headerImage: string;
-      text: string;
-      border: string;
-      disabled: string;
-      disabledText: string;
-    };
-  }
+import type { CategoryFilter } from '../types';
+
+const base = {
+  background: '#faf6f0',
+  surface: '#ffffff',
+  surfaceAlt: '#f3ece2',
+  text: '#2a211b',
+  textMuted: '#6b5f55',
+  border: '#e6dbcd',
+  success: '#15803d',
+  error: '#b91c1c',
+  overlay: 'rgba(28, 20, 14, 0.55)',
+};
+
+// Every category shares the same neutral base and only swaps its accent,
+// so the site keeps one consistent look while still reflecting the category.
+const accents: Record<
+  CategoryFilter,
+  { primary: string; primaryDark: string; primarySoft: string }
 > = {
-  soups: {
-    colors: {
-      primary: '#ffcc00',
-      secondary: '#ff9900',
-      background: '#fff8e1',
-      lightBackground: '#fff3c1',
-      accent: '#ff6600',
-      headerImage: '/assets/soup.png',
-      text: '#6b4226',
-      border: '#ff6600',
-      disabled: '#ffe6b3',
-      disabledText: '#a65400',
-    },
+  all: { primary: '#c2410c', primaryDark: '#9a3412', primarySoft: '#fdeadf' },
+  mainDishes: {
+    primary: '#c2410c',
+    primaryDark: '#9a3412',
+    primarySoft: '#fdeadf',
+  },
+  soups: { primary: '#b45309', primaryDark: '#92400e', primarySoft: '#fdf1d8' },
+  salads: {
+    primary: '#3f7d20',
+    primaryDark: '#2f5f17',
+    primarySoft: '#e6f2dc',
   },
   desserts: {
-    colors: {
-      primary: '#ff99cc',
-      secondary: '#ff6699',
-      background: '#ffe4f1',
-      lightBackground: '#ffe1f3',
-      accent: '#cc3366',
-      headerImage: '/assets/desserts.png',
-      text: '#6b4226',
-      border: '#cc3366',
-      disabled: '#ffeaf4',
-      disabledText: '#993355',
-    },
-  },
-  salads: {
-    colors: {
-      primary: '#66cc33',
-      secondary: '#009900',
-      background: '#f1ffe4',
-      lightBackground: '#e1ffc1',
-      accent: '#ff7043',
-      headerImage: '/assets/salads.png',
-      text: '#2e8b57',
-      border: '#ff7043',
-      disabled: '#e6ffd9',
-      disabledText: '#338c27',
-    },
-  },
-  mainDishes: {
-    colors: {
-      primary: '#cc0000',
-      secondary: '#990000',
-      background: '#ffe4e4',
-      lightBackground: '#ffcccc',
-      accent: '#660000',
-      headerImage: '/assets/mainMeal.png',
-      text: '#8b3d3d',
-      border: '#8b3d3d',
-      disabled: '#ffd6d6',
-      disabledText: '#992626',
-    },
+    primary: '#be185d',
+    primaryDark: '#9d174d',
+    primarySoft: '#fce5ef',
   },
   drinks: {
-    colors: {
-      primary: '#0099cc',
-      secondary: '#006699',
-      background: '#e1f4ff',
-      lightBackground: '#c1e9ff',
-      accent: '#004466',
-      headerImage: '/assets/drinks.png',
-      text: '#004d73',
-      border: '#004466',
-      disabled: '#d8f0ff',
-      disabledText: '#336073',
-    },
+    primary: '#0369a1',
+    primaryDark: '#075985',
+    primarySoft: '#e0f0fa',
   },
 };
+
+const makeTheme = (category: CategoryFilter) => ({
+  colors: { ...base, ...accents[category] },
+  fonts: {
+    heading: "'Playfair Display', Georgia, serif",
+    body: "'Raleway', system-ui, -apple-system, 'Segoe UI', sans-serif",
+  },
+  radius: { sm: '8px', md: '12px', lg: '20px', pill: '999px' },
+  shadow: {
+    sm: '0 1px 2px rgba(42, 33, 27, 0.06), 0 1px 3px rgba(42, 33, 27, 0.08)',
+    md: '0 4px 12px rgba(42, 33, 27, 0.08), 0 2px 4px rgba(42, 33, 27, 0.05)',
+    lg: '0 24px 48px rgba(42, 33, 27, 0.18)',
+  },
+  breakpoints: { sm: '600px', md: '900px' },
+});
+
+export type AppTheme = ReturnType<typeof makeTheme>;
+
+export const themes = Object.fromEntries(
+  (Object.keys(accents) as CategoryFilter[]).map((key) => [key, makeTheme(key)])
+) as Record<CategoryFilter, AppTheme>;

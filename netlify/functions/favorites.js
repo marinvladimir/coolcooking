@@ -1,75 +1,40 @@
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
-import jwt from 'jsonwebtoken';
-
-dotenv.config();
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
+import supabase from '../lib/supabase.js';
+import { getUserId, json, unauthorized } from '../lib/http.js';
 
 export const handler = async (event) => {
-  const authHeader =
-    event.headers['Authorization'] || event.headers['authorization'];
-
-  if (!authHeader) {
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ error: 'Authorization header missing' }),
-    };
+  if (event.httpMethod !== 'GET') {
+    return json(405, { error: 'Method Not Allowed' });
   }
 
-  const token = authHeader.startsWith('Bearer ')
-    ? authHeader.split(' ')[1]
-    : null;
-
-  if (!token) {
-    return {
-      statusCode: 401,
-      body: JSON.stringify({ error: 'Token missing or malformed' }),
-    };
-  }
+  const userId = getUserId(event);
+  if (!userId) return unauthorized();
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.id;
-
     const { data, error } = await supabase
       .from('favorites')
       .select('recipe_id')
       .eq('user_id', userId);
 
-    if (error) {
-      throw new Error(error.message);
+    if (error) throw error;
+
+    if (data.length === 0) {
+      return json(200, { favorites: [] });
     }
 
-    if (data.length > 0) {
-      const recipeIds = data.map((fav) => fav.recipe_id);
-      const { data: recipes, error: recipesError } = await supabase
-        .from('recipes')
-        .select('*')
-        .in('id', recipeIds);
+    const { data: recipes, error: recipesError } = await supabase
+      .from('recipes')
+      .select('*')
+      .in(
+        'id',
+        data.map((fav) => fav.recipe_id)
+      )
+      .order('id', { ascending: false });
 
-      if (recipesError) {
-        throw new Error(recipesError.message);
-      }
+    if (recipesError) throw recipesError;
 
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ favorites: recipes }),
-      };
-    } else {
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ favorites: [] }),
-      };
-    }
+    return json(200, { favorites: recipes });
   } catch (err) {
     console.error('Error fetching favorites:', err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Error fetching favorites' }),
-    };
+    return json(500, { error: 'Error fetching favorites' });
   }
 };

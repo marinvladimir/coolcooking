@@ -1,64 +1,51 @@
-import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { validationResult } from 'express-validator';
-import dotenv from 'dotenv';
+import supabase from '../lib/supabase.js';
+import { escapeLike, json, parseBody } from '../lib/http.js';
 
-dotenv.config();
+const INVALID_CREDENTIALS = 'Invalid email or password';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
+export const handler = async (event) => {
+  if (event.httpMethod !== 'POST') {
+    return json(405, { error: 'Method Not Allowed' });
+  }
 
-export const handler = async (event, context) => {
-  const { email, password } = JSON.parse(event.body);
-  const errors = validationResult({ body: { email, password } });
-  if (!errors.isEmpty()) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ errors: errors.array() }),
-    };
+  const body = parseBody(event);
+  const email = String(body?.email ?? '')
+    .trim()
+    .toLowerCase();
+  const password = String(body?.password ?? '');
+
+  if (!email || !password) {
+    return json(400, { error: 'Email and password are required' });
   }
 
   try {
-    const { data, error } = await supabase
+    const { data: users, error } = await supabase
       .from('users')
       .select('*')
-      .eq('email', email)
-      .single();
+      .ilike('email', escapeLike(email))
+      .limit(1);
 
-    if (error || !data) {
-      return {
-        statusCode: 404,
-        body: JSON.stringify({ error: 'User not found' }),
-      };
+    if (error) throw error;
+    const user = users[0];
+
+    // Same response for unknown email and wrong password, so the endpoint
+    // does not reveal which emails are registered.
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return json(401, { error: INVALID_CREDENTIALS });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, data.password);
-    if (!isPasswordValid) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: 'Invalid credentials' }),
-      };
-    }
-
-    const token = jwt.sign({ id: data.id }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
+    const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, {
+      expiresIn: '7d',
     });
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({
-        token,
-        user: { id: data.id, username: data.username, email: data.email },
-      }),
-    };
+    return json(200, {
+      token,
+      user: { id: user.id, username: user.username, email: user.email },
+    });
   } catch (err) {
-    console.error(err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Login failed' }),
-    };
+    console.error('Login error:', err);
+    return json(500, { error: 'Login failed. Please try again later.' });
   }
 };

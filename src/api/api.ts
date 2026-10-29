@@ -1,46 +1,69 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import {
-  showErrorNotification,
-  showSuccessNotification,
-} from '../utils/notification';
-import { API_BASE_URL } from '../config';
-
-const BASE_URL = `${API_BASE_URL}/.netlify/functions/`;
+  API_BASE_URL,
+  CLOUDINARY_CLOUD_NAME,
+  CLOUDINARY_UPLOAD_PRESET,
+} from '../config';
+import { AUTH_EXPIRED_EVENT, getToken } from '../states/authUtils';
+import type { AuthUser, NewRecipe, Recipe } from '../types';
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: `${API_BASE_URL}/.netlify/functions`,
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 20000,
 });
 
-api.interceptors.request.use(
-  (config) => {
-    if (
-      config.url &&
-      (config.url.startsWith('/favorites') ||
-        config.url.startsWith('/favorite'))
-    ) {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+api.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  return config;
+});
+
+api.interceptors.response.use(undefined, (error: AxiosError) => {
+  if (error.response?.status === 401 && error.config?.headers?.Authorization) {
+    window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+  }
+  return Promise.reject(error);
+});
+
+/** Turns any thrown value into a message that is safe to show to the user. */
+export const getErrorMessage = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError(error)) {
+    if (!error.response) {
+      return 'Cannot reach the server. Check your connection and try again.';
+    }
+    const data = error.response.data as { error?: string; message?: string };
+    return data?.error || data?.message || fallback;
+  }
+  return error instanceof Error && error.message ? error.message : fallback;
+};
+
+const uploadImage = async (file: File): Promise<string> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    { method: 'POST', body: formData }
+  );
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok || !data.secure_url) {
+    throw new Error('Image upload failed. Please try another image.');
+  }
+  return data.secure_url as string;
+};
 
 export const apiService = {
   login: async (data: { email: string; password: string }) => {
-    try {
-      const response = await api.post('/login', data);
-      showSuccessNotification('Login successful!');
-      return response.data;
-    } catch (error) {
-      console.error('Error during login:', error);
-      showErrorNotification('Login failed. Please check your credentials.');
-      throw error;
-    }
+    const response = await api.post<{ token: string; user: AuthUser }>(
+      '/login',
+      data
+    );
+    return response.data;
   },
 
   register: async (data: {
@@ -48,136 +71,44 @@ export const apiService = {
     email: string;
     password: string;
   }) => {
-    try {
-      const response = await api.post('/register', data);
-      showSuccessNotification('Registration successful! Please log in.');
-      return response.data;
-    } catch (error) {
-      console.error('Error during registration:', error);
-      showErrorNotification('Registration failed. Please try again.');
-      throw error;
-    }
+    const response = await api.post<{ user: AuthUser }>('/register', data);
+    return response.data;
   },
 
   fetchRecipes: async () => {
-    try {
-      const response = await api.get('/recipes');
-      showSuccessNotification('Successfully received recipes!');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching recipes:', error);
-      showErrorNotification('Failed to fetch recipes');
-      throw error;
-    }
+    const response = await api.get<Recipe[]>('/recipes');
+    return response.data ?? [];
   },
 
-    fetchGeneratedRecipe: async (ingredients: any) => {
-      try {
-        const response = await api.post('/generate-recipe', { ingredients });
-        return response.data.recipe;
-      } catch (error) {
-        console.error('Error generating recipe:', error);
-        showErrorNotification('Failed to generate recipe');
-        throw error;
-      }
-    },
-  
-
   fetchFavorites: async () => {
-    try {
-      const response = await api.get('/favorites');
-      return response.data.favorites;
-    } catch (error) {
-      console.error('Error fetching favorites:', error);
-      showErrorNotification('Failed to fetch favorites');
-      throw error;
-    }
+    const response = await api.get<{ favorites: Recipe[] }>('/favorites');
+    return response.data.favorites ?? [];
   },
 
   checkIfFavorite: async (recipeId: number) => {
-    try {
-      const response = await api.get(`/favorite?recipeId=${recipeId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error checking if favorite:', error);
-      throw error;
-    }
+    const response = await api.get<{ isFavorite: boolean }>('/favorite', {
+      params: { recipeId },
+    });
+    return response.data.isFavorite;
   },
 
-  toggleFavorite: async (recipeId: number, isFavorite: boolean) => {
-    try {
-      const url = `/favorite?recipeId=${recipeId}`;
-
-      if (isFavorite) {
-        const response = await api.delete(url);
-        if (response.status === 200) {
-          showSuccessNotification('Removed from favorites');
-          return false;
-        }
-      } else {
-        const response = await api.post(url);
-        if (response.status === 200 || response.status === 201) {
-          showSuccessNotification('Added to favorites');
-          return true;
-        }
-      }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      showErrorNotification('Error toggling favorite');
-      throw error;
+  /** Sets the favorite state and returns the new value. */
+  setFavorite: async (recipeId: number, favorite: boolean) => {
+    const config = { params: { recipeId } };
+    if (favorite) {
+      await api.post('/favorite', null, config);
+    } else {
+      await api.delete('/favorite', config);
     }
+    return favorite;
   },
 
-  uploadRecipe: async (data: Record<string, any>, file?: File | null) => {
-    if (!file) {
-      showErrorNotification('No image file provided!');
-      throw new Error('No image file provided!');
-    }
-
-    const uploadToCloudinary = async (file: File) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', 'cooking');
-
-      const response = await fetch(
-        'https://api.cloudinary.com/v1_1/drvntbfxu/image/upload',
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
-
-      const data = await response.json();
-      return data.secure_url;
-    };
-
-    try {
-      const imageUrl = await uploadToCloudinary(file);
-      const formData = new FormData();
-      formData.append('image_url', imageUrl);
-      formData.delete('image');
-
-      Object.keys(data).forEach((key) => {
-        if (Array.isArray(data[key])) {
-          formData.append(key, data[key].join(', '));
-        } else {
-          formData.append(key, String(data[key]));
-        }
-      });
-      const response = await api.post('/upload', formData, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (response.status === 200 || response.status === 201) {
-        showSuccessNotification('Successfully submitted new recipe!');
-        return response.data;
-      } else {
-        showErrorNotification('Error adding the recipe!');
-        throw new Error('Error adding the recipe');
-      }
-    } catch (error) {
-      showErrorNotification('Request failed for adding the new recipe!');
-      console.error('Request failed', error);
-      throw error;
-    }
+  uploadRecipe: async (recipe: NewRecipe, image: File) => {
+    const imageUrl = await uploadImage(image);
+    const response = await api.post<{ recipe: Recipe }>('/upload', {
+      ...recipe,
+      image_url: imageUrl,
+    });
+    return response.data.recipe;
   },
 };

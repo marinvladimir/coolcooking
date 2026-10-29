@@ -1,50 +1,61 @@
-# React + TypeScript + Vite
+# Cool Cooking
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A recipe web app: browse recipes by category, cook along with a step-by-step
+timer, save favorites, share your own recipes and estimate your daily
+nutrition in the meal planner.
 
-Currently, two official plugins are available:
+**Stack:** React 18 + TypeScript + Vite, styled-components, React Router,
+Netlify Functions, Supabase (Postgres) and Cloudinary for images.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Project structure
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-});
+```
+src/
+  api/          axios client for the Netlify functions
+  components/   shared UI (header, recipe card/modal, cooking timer, …)
+  constants/    recipe categories
+  pages/        Home, Recipes, Favorites, Meal planner, Login, Register, 404
+  states/       auth + theme context
+  styles/       theme tokens, global styles and UI primitives
+netlify/
+  functions/    serverless API (recipes, login, register, favorites, upload)
+  lib/          code shared by the functions (Supabase client, JWT helpers)
+scripts/
+  seedDb.js     creates the tables and inserts sample recipes
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+## Environment variables
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react';
+Server side (Netlify site settings or a local `.env`):
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-});
+| Variable       | Purpose                              |
+| -------------- | ------------------------------------ |
+| `SUPABASE_URL` | Supabase project URL                 |
+| `SUPABASE_KEY` | Supabase service key                 |
+| `JWT_SECRET`   | Secret used to sign the login tokens |
+
+Client side (optional):
+
+| Variable                        | Default     |
+| ------------------------------- | ----------- |
+| `VITE_API_BASE_URL`             | same origin |
+| `VITE_CLOUDINARY_CLOUD_NAME`    | `drvntbfxu` |
+| `VITE_CLOUDINARY_UPLOAD_PRESET` | `cooking`   |
+
+## Development
+
+```bash
+npm install
+npx netlify dev   # frontend + functions on http://localhost:8888
+```
+
+`npm run dev` starts only the Vite frontend (no API).
+
+Other scripts:
+
+```bash
+npm run build   # type-check and build to dist/
+npm run lint    # ESLint
+npm run format  # Prettier
+npm run seed    # create tables and sample data in Supabase
 ```
